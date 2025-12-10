@@ -20,8 +20,8 @@ Add to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>com.retailid</groupId>
-    <artifactId>retailid-sdk</artifactId>
+    <groupId>com.metrc</groupId>
+    <artifactId>retailid</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -32,7 +32,7 @@ Add to your `build.gradle`:
 
 ```gradle
 dependencies {
-    implementation 'com.retailid:retailid-sdk:1.0.0'
+    implementation 'com.metrc:retailid:1.0.0'
 }
 ```
 

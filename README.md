@@ -12,7 +12,7 @@ Use these SDKs to encode and decode RetailID labels in your applications.
 |----------|---------|---------|---------|
 | [JavaScript](./javascript/) | `@metrc/retailid` | 0.10.0 | `npm install @metrc/retailid` |
 | [Python](./python/) | `retailid` | 0.10.0 | `pip install retailid` |
-| [Java](./java/) | `retailid-sdk` | 1.0.0 | Maven (see below) |
+| [Java](./java/) | `com.metrc:retailid` | 1.0.0 | Maven (see below) |
 
 ## Quick Examples
 
@@ -124,8 +124,8 @@ Add to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>com.retailid</groupId>
-    <artifactId>retailid-sdk</artifactId>
+    <groupId>com.metrc</groupId>
+    <artifactId>retailid</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
