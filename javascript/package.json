@@ -1,0 +1,60 @@
+{
+  "name": "@metrc/retailid",
+  "version": "0.10.0",
+  "description": "Official SDK for encoding and decoding Metrc RetailID QR labels",
+  "main": "dist/retailid.cjs",
+  "module": "dist/retailid.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/retailid.esm.js",
+      "require": "./dist/retailid.cjs"
+    },
+    "./browser": "./dist/retailid.min.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "build:watch": "rollup -c -w",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test",
+    "publish:cdn": "./publish.sh"
+  },
+  "keywords": [
+    "retailid",
+    "metrc",
+    "qr",
+    "qr-code",
+    "supply-chain",
+    "traceability"
+  ],
+  "author": "Metrc LLC <dev@metrc.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/retailid-sdk.git",
+    "directory": "javascript"
+  },
+  "homepage": "https://www.metrc.com/retailid/",
+  "bugs": {
+    "url": "https://github.com/user/retailid-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "jsdom": "^27.0.1",
+    "rollup": "^4.53.3",
+    "tslib": "^2.8.1",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RetailId SDK Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .header {
+      background: rgb(33, 63, 57);
+      margin: -20px -20px 24px -20px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header img { height: 32px; }
+    .header h1 { color: white; margin: 0; font-size: 20px; }
+    .subtitle { color: #666; margin-bottom: 24px; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h2 { margin-top: 0; font-size: 16px; color: #333; }
+    label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    input:focus { outline: none; border-color: rgb(33, 63, 57); }
+    button {
+      background: rgb(33, 63, 57);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: rgb(23, 53, 47); }
+    .result {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      word-break: break-all;
+      margin-top: 12px;
+    }
+    .result.error { background: #fff5f5; border-color: #ffcccc; color: #c00; }
+    .result.success { background: #f0fff4; border-color: #c6f6d5; }
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .checkbox-row input { width: auto; margin: 0; }
+    .checkbox-row label { margin: 0; }
+    .examples { font-size: 12px; color: #888; margin-top: -8px; margin-bottom: 12px; }
+    .output-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .output-row .value { flex: 1; word-break: break-all; }
+    .copy-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: #5a6268; }
+    .copy-btn.copied { background: #28a745; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="https://cdn.1a4.com/qr/js/logo-xsmall.png" alt="RetailId">
+    <h1>SDK Demo</h1>
+  </div>
+  <p class="subtitle">Decode and encode RetailId QR code URLs</p>
+
+  <div class="card">
+    <h2>Decode URL → Tag + Index</h2>
+    <label for="decodeUrl">QR Code URL</label>
+    <input type="text" id="decodeUrl" placeholder="HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX">
+    <p class="examples">Try: HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX (base36) or https://1a4.com/GkBgMAAEG2AAAJKXEQ (base64)</p>
+    <div class="checkbox-row">
+      <input type="checkbox" id="strictMode">
+      <label for="strictMode">Strict mode (require known prefix or valid MongoDB timestamp)</label>
+    </div>
+    <button onclick="decodeUrl()">Decode</button>
+    <div id="decodeResult" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Encode Tag + Index → URL</h2>
+    <label for="encodeTag">Tag (24-char hex)</label>
+    <input type="text" id="encodeTag" placeholder="1a4060300020081000006609">
+    <div class="row">
+      <div>
+        <label for="encodeIndex">Index</label>
+        <input type="number" id="encodeIndex" placeholder="1" min="0">
+      </div>
+      <div>
+        <label for="encodeFormat">Format</label>
+        <select id="encodeFormat">
+          <option value="base36">Base36 (default)</option>
+          <option value="base64">Base64 (legacy)</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="encodeUrl()">Encode</button>
+    <div id="encodeResult" class="result" style="display:none;"></div>
+  </div>
+
+  <script src="https://cdn.1a4.com/qr/js/retailid.min.js"></script>
+  <script>
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
+    }
+
+    function outputRow(label, value) {
+      return `<div class="output-row">
+        <strong>${label}:</strong>
+        <span class="value">${value}</span>
+        <button class="copy-btn" onclick="copyToClipboard('${value}', this)">Copy</button>
+      </div>`;
+    }
+
+    function decodeUrl() {
+      const input = document.getElementById('decodeUrl').value.trim();
+      const strict = document.getElementById('strictMode').checked;
+      const result = document.getElementById('decodeResult');
+      result.style.display = 'block';
+      try {
+        const pair = new RetailId.RetailIdPair(input, strict);
+        const tag = pair.batchId.toHexString();
+        const index = pair.index;
+        result.className = 'result success';
+        result.innerHTML = outputRow('Tag', tag) + outputRow('Index', index);
+      } catch (e) {
+        result.className = 'result error';
+        result.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    function encodeUrl() {
+      const tag = document.getElementById('encodeTag').value.trim();
+      const index = parseInt(document.getElementById('encodeIndex').value, 10);
+      const format = document.getElementById('encodeFormat').value;
+      const result = document.getElementById('encodeResult');
+      result.style.display = 'block';
+      try {
+        const objectId = new RetailId.ObjectId(tag);
+        const url = RetailId.getShortUrl(objectId, index, { base64: format === 'base64' });
+        result.className = 'result success';
+        result.innerHTML = outputRow('URL', url);
+      } catch (e) {
+        result.className = 'result error';
+        result.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    // Pre-fill with example
+    document.getElementById('decodeUrl').value = 'HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX';
+    document.getElementById('encodeTag').value = '1a4060300020081000006609';
+    document.getElementById('encodeIndex').value = '1';
+  </script>
+</body>
+</html>
