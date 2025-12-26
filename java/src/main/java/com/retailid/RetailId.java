@@ -18,12 +18,12 @@ import java.util.Arrays;
  * <p>Example usage:
  * <pre>
  * // Encoding
- * ObjectId batchId = new ObjectId("1a4060300020081000006609");
+ * ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
  * String url = RetailId.encode(batchId, 1);
- * // Result: "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+ * // Result: "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
  *
  * // Decoding
- * RetailIdPair pair = RetailId.decode("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
+ * RetailIdPair pair = RetailId.decode("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
  * ObjectId decoded = pair.getBatchId();
  * int index = pair.getIndex();
  * </pre>

@@ -20,10 +20,10 @@ public class RetailIdTest {
      */
     @ParameterizedTest
     @CsvSource({
-        "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX,       1a4060300020081000006609, 1",
-        "HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT,     1a4060300020081000006609, 128",
-        "HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D,    1a4060300020081000006609, 16384",
-        "https://1a4.com/GkBgMAAEG2AAAJKXEQ,          1a40603000041b6000009297, 17"
+        "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL,       ABCDEF012345670000027190, 1",
+        "HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT,     ABCDEF012345670000027190, 128",
+        "HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D,    ABCDEF012345670000027190, 16384",
+        "https://1a4.com/GkBgMAAEG2AAAJKXEQ,          ABCDEF012345670000027190, 17"
     })
     @DisplayName("Test vectors from JavaScript SDK")
     void testVectors(String url, String expectedBatchId, int expectedIndex) {
@@ -38,11 +38,11 @@ public class RetailIdTest {
     @Test
     @DisplayName("Encode and decode base36 (index=1)")
     void testBase36Index1() {
-        ObjectId batchId = new ObjectId("1a4060300020081000006609");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         int index = 1;
 
         String url = RetailId.encode(batchId, index);
-        assertEquals("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX", url);
+        assertEquals("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL", url);
 
         RetailIdPair decoded = RetailId.decode(url);
         assertEquals(batchId.toHexString(), decoded.getBatchId().toHexString());
@@ -52,7 +52,7 @@ public class RetailIdTest {
     @Test
     @DisplayName("Encode and decode base36 (index=128)")
     void testBase36Index128() {
-        ObjectId batchId = new ObjectId("1a4060300020081000006609");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         int index = 128;
 
         String url = RetailId.encode(batchId, index);
@@ -66,7 +66,7 @@ public class RetailIdTest {
     @Test
     @DisplayName("Encode and decode base36 (index=16384)")
     void testBase36Index16384() {
-        ObjectId batchId = new ObjectId("1a4060300020081000006609");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         int index = 16384;
 
         String url = RetailId.encode(batchId, index);
@@ -80,7 +80,7 @@ public class RetailIdTest {
     @Test
     @DisplayName("Encode and decode base64")
     void testBase64() {
-        ObjectId batchId = new ObjectId("1a40603000041b6000009297");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         int index = 17;
 
         EncodeOptions options = new EncodeOptions().setBase64(true);
@@ -95,10 +95,10 @@ public class RetailIdTest {
     @Test
     @DisplayName("RetailIdPair constructor and encode method")
     void testRetailIdPairConstructor() {
-        String url = "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX";
+        String url = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL";
         RetailIdPair pair = new RetailIdPair(url);
 
-        assertEquals("1a4060300020081000006609", pair.getBatchId().toHexString());
+        assertEquals("ABCDEF012345670000027190", pair.getBatchId().toHexString());
         assertEquals(1, pair.getIndex());
 
         // Encode back
@@ -112,7 +112,7 @@ public class RetailIdTest {
         String url = "https://1a4.com/GkBgMAAEG2AAAJKXEQ";
         RetailIdPair pair = new RetailIdPair(url);
 
-        assertEquals("1a40603000041b6000009297", pair.getBatchId().toHexString());
+        assertEquals("ABCDEF012345670000027190", pair.getBatchId().toHexString());
         assertEquals(17, pair.getIndex());
 
         // Encode back as base64
@@ -124,7 +124,7 @@ public class RetailIdTest {
     @Test
     @DisplayName("Custom domain")
     void testCustomDomain() {
-        ObjectId batchId = new ObjectId("1a4060300020081000006609");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         int index = 1;
 
         EncodeOptions options = new EncodeOptions().setDomain("abc.com");
@@ -142,14 +142,14 @@ public class RetailIdTest {
         String shortCode = "5LN8CBN1UB33DON9CHKX";
         RetailIdPair pair = RetailId.decode(shortCode);
 
-        assertEquals("1a4060300020081000006609", pair.getBatchId().toHexString());
+        assertEquals("ABCDEF012345670000027190", pair.getBatchId().toHexString());
         assertEquals(1, pair.getIndex());
     }
 
     @Test
     @DisplayName("Various index values")
     void testVariousIndexes() {
-        ObjectId batchId = new ObjectId("1a4060300020081000006609");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
 
         int[] indexes = {0, 1, 127, 128, 255, 256, 16383, 16384, 65535, 100000};
 
@@ -163,7 +163,7 @@ public class RetailIdTest {
     @Test
     @DisplayName("Round-trip encoding preserves data")
     void testRoundTrip() {
-        ObjectId batchId = new ObjectId("1a40603000041b6000009297");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         int index = 12345;
 
         // Base36 round trip
@@ -207,7 +207,7 @@ public class RetailIdTest {
     @Test
     @DisplayName("Negative index throws exception")
     void testNegativeIndex() {
-        ObjectId batchId = new ObjectId("1a4060300020081000006609");
+        ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
         assertThrows(IllegalArgumentException.class, () -> {
             RetailId.encode(batchId, -1);
         });
@@ -224,8 +224,8 @@ public class RetailIdTest {
     @Test
     @DisplayName("RetailIdPair equality")
     void testRetailIdPairEquality() {
-        RetailIdPair pair1 = new RetailIdPair("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
-        RetailIdPair pair2 = new RetailIdPair("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
+        RetailIdPair pair1 = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+        RetailIdPair pair2 = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
         RetailIdPair pair3 = new RetailIdPair("HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT");
 
         assertEquals(pair1, pair2);
@@ -237,8 +237,8 @@ public class RetailIdTest {
     @DisplayName("Case insensitivity for Base36")
     void testCaseInsensitivity() {
         // Base36 should be case-insensitive during decode
-        String upper = "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX";
-        String lower = "https://1a4.com/5ln8cbn1ub33don9chkx";
+        String upper = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL";
+        String lower = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL";
 
         RetailIdPair pairUpper = RetailId.decode(upper);
         RetailIdPair pairLower = RetailId.decode(lower);

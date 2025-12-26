@@ -24,18 +24,18 @@ Create a short URL from a batch ID and index:
 ```javascript
 import { getShortUrl, ObjectId } from '@metrc/retailid';
 
-const batchId = new ObjectId('1a40603000041b6000009297');
+const batchId = new ObjectId('ABCDEF012345670000027190');
 const url = getShortUrl(batchId, 17);
-// => "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+// => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
 **Python**
 ```python
 from retailid import ObjectId, get_short_url
 
-batch_id = ObjectId('1a40603000041b6000009297')
-url = get_short_url(batch_id, 17)
-# => "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+batch_id = ObjectId('abcdef012345670000027190')
+url = get_short_url(batch_id, 485, {domain: "D.1A4.COM"})
+# => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
 **Java**
@@ -43,9 +43,9 @@ url = get_short_url(batch_id, 17)
 import com.retailid.ObjectId;
 import com.retailid.RetailId;
 
-ObjectId batchId = new ObjectId("1a40603000041b6000009297");
-String url = RetailId.encode(batchId, 17);
-// => "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+ObjectId batchId = new ObjectId("abcdef012345670000027190");
+String url = RetailId.encode(batchId, 485, {domain: "D.1A4.COM"});
+// => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
 ### Decoding
@@ -56,37 +56,37 @@ Parse a short URL back to its components:
 ```javascript
 import { RetailIdPair } from '@metrc/retailid';
 
-const pair = new RetailIdPair('HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX');
-console.log(pair.batchId.toHexString()); // "1a40603000041b6000009297"
-console.log(pair.index);                  // 17
+const pair = new RetailIdPair('HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL');
+console.log(pair.batchId.toHexString()); // "abcdef012345670000027190"
+console.log(pair.index);                  // 485
 ```
 
 **Python**
 ```python
 from retailid import RetailIdPair
 
-pair = RetailIdPair('HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX')
-print(pair.batch_id.to_hex_string())  # "1a40603000041b6000009297"
-print(pair.index)                      # 17
+pair = RetailIdPair('HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL')
+print(pair.batch_id.to_hex_string())  # "ABCDEF012345670000027190"
+print(pair.index)                      # 485
 ```
 
 **Java**
 ```java
 import com.retailid.RetailIdPair;
 
-RetailIdPair pair = new RetailIdPair("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
-System.out.println(pair.getBatchId().toHexString()); // "1a40603000041b6000009297"
-System.out.println(pair.getIndex());                  // 17
+RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+System.out.println(pair.getBatchId().toHexString()); // "ABCDEF012345670000027190"
+System.out.println(pair.getIndex());                  // 485
 ```
 
 ## URL Formats
 
 RetailID supports two encoding formats:
 
-| Format | URL Pattern | Case | Use |
-|--------|-------------|------|-----|
-| Base36 | `HTTPS://1A4.COM/<CODE>` | Uppercase | Default, recommended |
-| Base64 | `https://1a4.com/<CODE>` | Mixed | Legacy support |
+| Format | URL Pattern                | Case | Use |
+|--------|----------------------------|------|-----|
+| Base36 | `HTTPS://D.1A4.COM/<CODE>` | Uppercase | Default, recommended |
+| Base64 | `https://d.1a4.com/<CODE>` | Mixed | Legacy support |
 
 Base36 encoding produces case-insensitive codes using only alphanumeric characters (0-9, A-Z), making them easier to type manually if needed.
 

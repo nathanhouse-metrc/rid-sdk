@@ -10,7 +10,7 @@ package com.retailid;
  * <p>Example usage:
  * <pre>
  * // Decode from URL
- * RetailIdPair pair = new RetailIdPair("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
+ * RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
  * ObjectId batchId = pair.getBatchId();
  * int index = pair.getIndex();
  *

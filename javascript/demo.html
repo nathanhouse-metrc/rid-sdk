@@ -96,8 +96,8 @@
   <div class="card">
     <h2>Decode URL → Tag + Index</h2>
     <label for="decodeUrl">QR Code URL</label>
-    <input type="text" id="decodeUrl" placeholder="HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX">
-    <p class="examples">Try: HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX (base36) or https://1a4.com/GkBgMAAEG2AAAJKXEQ (base64)</p>
+    <input type="text" id="decodeUrl" placeholder="HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL">
+    <p class="examples">Try: HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL (base36) or https://1a4.com/GkBgMAAEG2AAAJKXEQ (base64)</p>
     <div class="checkbox-row">
       <input type="checkbox" id="strictMode">
       <label for="strictMode">Strict mode (require known prefix or valid MongoDB timestamp)</label>
@@ -109,7 +109,7 @@
   <div class="card">
     <h2>Encode Tag + Index → URL</h2>
     <label for="encodeTag">Tag (24-char hex)</label>
-    <input type="text" id="encodeTag" placeholder="1a4060300020081000006609">
+    <input type="text" id="encodeTag" placeholder="ABCDEF012345670000027190">
     <div class="row">
       <div>
         <label for="encodeIndex">Index</label>
@@ -183,8 +183,8 @@
     }
 
     // Pre-fill with example
-    document.getElementById('decodeUrl').value = 'HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX';
-    document.getElementById('encodeTag').value = '1a4060300020081000006609';
+    document.getElementById('decodeUrl').value = 'HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL';
+    document.getElementById('encodeTag').value = 'ABCDEF012345670000027190';
     document.getElementById('encodeIndex').value = '1';
   </script>
 </body>

@@ -13,7 +13,7 @@ public class ObjectIdTest {
     @Test
     @DisplayName("Create ObjectId from hex string")
     void testFromHexString() {
-        String hex = "1a4060300020081000006609";
+        String hex = "ABCDEF012345670000027190";
         ObjectId id = new ObjectId(hex);
         assertEquals(hex, id.toHexString());
     }
@@ -23,7 +23,7 @@ public class ObjectIdTest {
     void testFromBytes() {
         byte[] bytes = {0x1a, 0x40, 0x60, 0x30, 0x00, 0x20, 0x08, 0x10, 0x00, 0x00, 0x66, 0x09};
         ObjectId id = new ObjectId(bytes);
-        assertEquals("1a4060300020081000006609", id.toHexString());
+        assertEquals("ABCDEF012345670000027190", id.toHexString());
     }
 
     @Test
@@ -44,7 +44,7 @@ public class ObjectIdTest {
     @Test
     @DisplayName("getId returns copy")
     void testGetIdReturnsCopy() {
-        ObjectId id = new ObjectId("1a4060300020081000006609");
+        ObjectId id = new ObjectId("ABCDEF012345670000027190");
         byte[] bytes1 = id.getId();
         byte[] bytes2 = id.getId();
 
@@ -55,9 +55,9 @@ public class ObjectIdTest {
     @Test
     @DisplayName("ObjectId equality")
     void testEquality() {
-        ObjectId id1 = new ObjectId("1a4060300020081000006609");
-        ObjectId id2 = new ObjectId("1a4060300020081000006609");
-        ObjectId id3 = new ObjectId("1a40603000041b6000009297");
+        ObjectId id1 = new ObjectId("ABCDEF012345670000027190");
+        ObjectId id2 = new ObjectId("ABCDEF012345670000027190");
+        ObjectId id3 = new ObjectId("ABCDEF012345670000027190");
 
         assertEquals(id1, id2);
         assertNotEquals(id1, id3);
@@ -81,7 +81,7 @@ public class ObjectIdTest {
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new ObjectId("1a4060300020081000006609ZZ");
+            new ObjectId("ABCDEF012345670000027190ZZ");
         });
 
         assertThrows(IllegalArgumentException.class, () -> {
@@ -116,7 +116,7 @@ public class ObjectIdTest {
     @Test
     @DisplayName("toString returns hex string")
     void testToString() {
-        String hex = "1a4060300020081000006609";
+        String hex = "ABCDEF012345670000027190";
         ObjectId id = new ObjectId(hex);
         assertEquals(hex, id.toString());
     }
@@ -124,8 +124,8 @@ public class ObjectIdTest {
     @Test
     @DisplayName("Case insensitive hex parsing")
     void testCaseInsensitiveHex() {
-        ObjectId id1 = new ObjectId("1a4060300020081000006609");
-        ObjectId id2 = new ObjectId("1A4060300020081000006609");
+        ObjectId id1 = new ObjectId("ABCDEF012345670000027190");
+        ObjectId id2 = new ObjectId("ABCDEF012345670000027190");
 
         assertEquals(id1, id2);
     }

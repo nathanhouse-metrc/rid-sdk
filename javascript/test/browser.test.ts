@@ -27,20 +27,20 @@ describe('RetailId Browser Bundle', () => {
 
   const testCases = [
     {
-      url: 'HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX',
-      expectedBatchId: '1a4060300020081000006609',
+      url: 'HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL',
+      expectedBatchId: 'ABCDEF012345670000027190',
       expectedIndex: 1,
       description: 'index 1 (36 chars)',
     },
     {
       url: 'HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT',
-      expectedBatchId: '1a4060300020081000006609',
+      expectedBatchId: 'ABCDEF012345670000027190',
       expectedIndex: 128,
       description: 'index 128 (38 chars)',
     },
     {
       url: 'HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D',
-      expectedBatchId: '1a4060300020081000006609',
+      expectedBatchId: 'ABCDEF012345670000027190',
       expectedIndex: 16384,
       description: 'index 16384 (39 chars)',
     },
@@ -76,7 +76,7 @@ describe('RetailId Browser Bundle', () => {
 
   describe('Direct encoding with getShortUrl', () => {
     it('should encode ObjectId + index to URL', () => {
-      const batchId = new RetailId.ObjectId('1a4060300020081000006609');
+      const batchId = new RetailId.ObjectId('ABCDEF012345670000027190');
       const url = RetailId.getShortUrl(batchId, 1);
 
       // Should produce uppercase URL
@@ -84,7 +84,7 @@ describe('RetailId Browser Bundle', () => {
 
       // Should decode back correctly
       const pair = new RetailId.RetailIdPair(url);
-      expect(pair.batchId.toHexString().toLowerCase()).toBe('1a4060300020081000006609');
+      expect(pair.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
       expect(pair.index).toBe(1);
     });
   });
@@ -93,7 +93,7 @@ describe('RetailId Browser Bundle', () => {
     it('should decode legacy base64 URL', () => {
       const url = 'https://1a4.com/GkBgMAAEG2AAAJKXEQ';
       const pair = new RetailId.RetailIdPair(url);
-      expect(pair.batchId.toHexString().toLowerCase()).toBe('1a40603000041b6000009297');
+      expect(pair.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
       expect(pair.index).toBe(17);
     });
 
@@ -106,7 +106,7 @@ describe('RetailId Browser Bundle', () => {
 
       // Decode again
       const pair2 = new RetailId.RetailIdPair(encoded);
-      expect(pair2.batchId.toHexString().toLowerCase()).toBe('1a40603000041b6000009297');
+      expect(pair2.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
       expect(pair2.index).toBe(17);
     });
 
@@ -122,14 +122,14 @@ describe('RetailId Browser Bundle', () => {
 
       // Decode again
       const pair2 = new RetailId.RetailIdPair(encoded);
-      expect(pair2.batchId.toHexString().toLowerCase()).toBe('1a40603000041b6000009297');
+      expect(pair2.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
       expect(pair2.index).toBe(17);
     });
   });
 
   describe('Encoder defaults to base36', () => {
     it('should produce base36 URL by default', () => {
-      const batchId = new RetailId.ObjectId('1a4060300020081000006609');
+      const batchId = new RetailId.ObjectId('ABCDEF012345670000027190');
       const url = RetailId.getShortUrl(batchId, 1);
 
       // Should be uppercase base36 format
@@ -137,7 +137,7 @@ describe('RetailId Browser Bundle', () => {
     });
 
     it('should produce base64 URL only when explicitly requested', () => {
-      const batchId = new RetailId.ObjectId('1a4060300020081000006609');
+      const batchId = new RetailId.ObjectId('ABCDEF012345670000027190');
       const url = RetailId.getShortUrl(batchId, 1, { base64: true });
 
       // Should be lowercase https with URL-safe base64
