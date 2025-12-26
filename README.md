@@ -44,8 +44,9 @@ url = get_short_url(batch_id, 485, domain="d.1a4.com")
 import com.retailid.ObjectId;
 import com.retailid.RetailId;
 
+EncodeOptions customDomain = new EncodeOptions().setDomain("d.1a4.com");
 ObjectId batchId = new ObjectId("abcdef012345670000027190");
-String url = RetailId.encode(batchId, 485);
+String url = RetailId.encode(batchId, 485, customDomain);
 // => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
