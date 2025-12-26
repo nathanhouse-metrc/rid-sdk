@@ -33,7 +33,7 @@ import { ObjectId, RetailIdPair, getShortUrl } from '@metrc/retailid';
 
 // Encode a batch ID and index to a short URL
 const batchId = new ObjectId('ABCDEF012345670000027190');
-const url = getShortUrl(batchId, 1);
+const url = getShortUrl(batchId, 485, {domain: "d.1a4.com"});
 // => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 
 // Decode a short URL back to its components
@@ -97,7 +97,7 @@ const scannedUrl = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL";
 // 2. Decode to get tag and index
 const pair = new RetailIdPair(scannedUrl);
 const tag = pair.batchId.toHexString();  // "ABCDEF012345670000027190"
-const index = pair.index;                 // 1
+const index = pair.index;                 // 485
 
 // 3. Use tag and index in your application
 console.log(`Tag: ${tag}, Index: ${index}`);
