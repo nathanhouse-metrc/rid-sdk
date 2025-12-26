@@ -19,13 +19,14 @@ Use these SDKs to encode and decode RetailID labels in your applications.
 ### Encoding
 
 Create a short URL from a batch ID and index:
+- default domain in the SDK is 1A4.COM - we're using a demo domain for our examples so we pass in a custom domain
 
 **JavaScript**
 ```javascript
 import { getShortUrl, ObjectId } from '@metrc/retailid';
 
 const batchId = new ObjectId('ABCDEF012345670000027190');
-const url = getShortUrl(batchId, 17);
+const url = getShortUrl(batchId, 485, {domain: "d.1a4.com"});
 // => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
@@ -34,7 +35,7 @@ const url = getShortUrl(batchId, 17);
 from retailid import ObjectId, get_short_url
 
 batch_id = ObjectId('abcdef012345670000027190')
-url = get_short_url(batch_id, 485, {domain: "D.1A4.COM"})
+url = get_short_url(batch_id, 485, domain="d.1a4.com")
 # => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
@@ -44,7 +45,7 @@ import com.retailid.ObjectId;
 import com.retailid.RetailId;
 
 ObjectId batchId = new ObjectId("abcdef012345670000027190");
-String url = RetailId.encode(batchId, 485, {domain: "D.1A4.COM"});
+String url = RetailId.encode(batchId, 485);
 // => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
@@ -73,7 +74,7 @@ print(pair.index)                      # 485
 **Java**
 ```java
 import com.retailid.RetailIdPair;
-
+EncodeOptions options = new EncodeOptions().setDomain("D.1A4.COM);
 RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
 System.out.println(pair.getBatchId().toHexString()); // "ABCDEF012345670000027190"
 System.out.println(pair.getIndex());                  // 485
@@ -83,10 +84,10 @@ System.out.println(pair.getIndex());                  // 485
 
 RetailID supports two encoding formats:
 
-| Format | URL Pattern                | Case | Use |
-|--------|----------------------------|------|-----|
-| Base36 | `HTTPS://D.1A4.COM/<CODE>` | Uppercase | Default, recommended |
-| Base64 | `https://d.1a4.com/<CODE>` | Mixed | Legacy support |
+| Format | URL Pattern              | Case | Use |
+|--------|--------------------------|------|-----|
+| Base36 | `HTTPS://1A4.COM/<CODE>` | Uppercase | Default, recommended |
+| Base64 | `https://1a4.com/<CODE>` | Mixed | Legacy support |
 
 Base36 encoding produces case-insensitive codes using only alphanumeric characters (0-9, A-Z), making them easier to type manually if needed.
 
