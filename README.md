@@ -74,7 +74,7 @@ print(pair.index)                      # 485
 **Java**
 ```java
 import com.retailid.RetailIdPair;
-EncodeOptions options = new EncodeOptions().setDomain("D.1A4.COM);
+
 RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
 System.out.println(pair.getBatchId().toHexString()); // "ABCDEF012345670000027190"
 System.out.println(pair.getIndex());                  // 485
