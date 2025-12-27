@@ -138,9 +138,9 @@ def main():
     test_vectors = [
         # (url, expected_tag, expected_index, description)
         ("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL", "ABCDEF012345670000027190", 1, "base36 index 1"),
-        ("HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT", "ABCDEF012345670000027190", 128, "base36 index 128"),
-        ("HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D", "ABCDEF012345670000027190", 16384, "base36 index 16384"),
-        ("https://1a4.com/GkBgMAAEG2AAAJKXEQ", "ABCDEF012345670000027190", 17, "legacy base64"),
+        ("HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YCCH", "ABCDEF012345670000027190", 128, "base36 index 128"),
+        ("HTTPS://D.1A4.COM/1FHPHPWI19S4JRYKFMYC8HS1", "ABCDEF012345670000027190", 16384, "base36 index 16384"),
+        ("https://d.1a4.com/q83vASNFZwAAAnGQEQ", "ABCDEF012345670000027190", 17, "legacy base64"),
     ]
 
     for url, expected_tag, expected_index, desc in test_vectors:
