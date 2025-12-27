@@ -21,9 +21,9 @@ public class RetailIdTest {
     @ParameterizedTest
     @CsvSource({
         "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL,       ABCDEF012345670000027190, 1",
-        "HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT,     ABCDEF012345670000027190, 128",
-        "HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D,    ABCDEF012345670000027190, 16384",
-        "https://1a4.com/GkBgMAAEG2AAAJKXEQ,          ABCDEF012345670000027190, 17"
+        "HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YCCH,     ABCDEF012345670000027190, 128",
+        "HTTPS://D.1A4.COM/1FHPHPWI19S4JRYKFMYC8HS1,    ABCDEF012345670000027190, 16384",
+        "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGK1,          ABCDEF012345670000027190, 17"
     })
     @DisplayName("Test vectors from JavaScript SDK")
     void testVectors(String url, String expectedBatchId, int expectedIndex) {
@@ -226,7 +226,7 @@ public class RetailIdTest {
     void testRetailIdPairEquality() {
         RetailIdPair pair1 = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
         RetailIdPair pair2 = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
-        RetailIdPair pair3 = new RetailIdPair("HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT");
+        RetailIdPair pair3 = new RetailIdPair("HTTPS://D.1A4.COM/13TX7BMRX3IU01B9EGTPTT");
 
         assertEquals(pair1, pair2);
         assertNotEquals(pair1, pair3);
