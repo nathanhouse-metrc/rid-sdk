@@ -12,7 +12,7 @@ import java.util.Arrays;
  * <p>Example usage:
  * <pre>
  * // Create from hex string
- * ObjectId id1 = new ObjectId("1a4060300020081000006609");
+ * ObjectId id1 = new ObjectId("ABCDEF012345670000027190");
  *
  * // Generate new random ObjectId
  * ObjectId id2 = new ObjectId();

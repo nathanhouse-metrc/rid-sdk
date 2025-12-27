@@ -137,10 +137,10 @@ def main():
     # Test cases matching JavaScript SDK test vectors
     test_vectors = [
         # (url, expected_tag, expected_index, description)
-        ("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX", "1a4060300020081000006609", 1, "base36 index 1"),
-        ("HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT", "1a4060300020081000006609", 128, "base36 index 128"),
-        ("HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D", "1a4060300020081000006609", 16384, "base36 index 16384"),
-        ("https://1a4.com/GkBgMAAEG2AAAJKXEQ", "1a40603000041b6000009297", 17, "legacy base64"),
+        ("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL", "ABCDEF012345670000027190", 1, "base36 index 1"),
+        ("HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YCCH", "ABCDEF012345670000027190", 128, "base36 index 128"),
+        ("HTTPS://D.1A4.COM/1FHPHPWI19S4JRYKFMYC8HS1", "ABCDEF012345670000027190", 16384, "base36 index 16384"),
+        ("https://d.1a4.com/q83vASNFZwAAAnGQEQ", "ABCDEF012345670000027190", 17, "legacy base64"),
     ]
 
     for url, expected_tag, expected_index, desc in test_vectors:

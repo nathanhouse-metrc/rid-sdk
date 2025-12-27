@@ -22,22 +22,22 @@ uv pip install retailid
 from retailid import RetailIdPair, ObjectId, get_short_url
 
 # Decode a RetailID URL
-pair = RetailIdPair("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX")
-print(f"Batch ID: {pair.batch_id}")  # 1a4060300020081000006609
+pair = RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL")
+print(f"Batch ID: {pair.batch_id}")  # ABCDEF012345670000027190
 print(f"Index: {pair.index}")         # 1
 
 # Re-encode to URL (base36 by default)
-url = pair.encode()
-print(url)  # HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX
+url = pair.encode(domain="d.1a4.com")
+print(url)  # HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL
 
 # Encode with base64 (legacy format)
-url_b64 = pair.encode(base64=True)
-print(url_b64)  # https://1a4.com/GkBgMAAgCBAAAAZhCQE
+url_b64 = pair.encode(base64=True, domain="d.1a4.com")
+print(url_b64)  # https://d.1a4.com/q83vASNFZwAAAnGQ5QM
 
 # Create from components
-batch_id = ObjectId("1a4060300020081000006609")
-url = get_short_url(batch_id, index=1)
-print(url)  # HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX
+batch_id = ObjectId("ABCDEF012345670000027190")
+url = get_short_url(batch_id, index=1, domain="d.1a4.com")
+print(url)  # HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL
 ```
 
 ## API Reference
@@ -108,12 +108,12 @@ For compatibility with the original `rid.py`, the `RetailId` class with static m
 from retailid import RetailId
 
 # Encode
-url = RetailId.encode("1a406030003a14e000043614", 3, use_base64=False)
+url = RetailId.encode("abcdef012345670000027190", 485, use_base64=False, domain="d.1a4.com")
 
 # Decode
-pair = RetailId.decode("HTTPS://1A4.COM/5LN8CBN28KHT5PLZ6QRN")
-print(pair.tag)    # 1a406030003a14e000043614
-print(pair.index)  # 3
+pair = RetailId.decode("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL")
+print(pair.tag)    # abcdef012345670000027190
+print(pair.index)  # 485
 ```
 
 ## URL Formats
@@ -121,12 +121,12 @@ print(pair.index)  # 3
 RetailID supports two URL formats:
 
 ### Base36 (default, recommended)
-- Uppercase: `HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX`
+- Uppercase: `HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL`
 - Alphanumeric only (0-9, A-Z)
 - Slightly longer but more robust for QR codes
 
 ### Base64 (legacy)
-- Lowercase: `https://1a4.com/GkBgMAAgCBAAAAZhCQE`
+- Lowercase: `https://1a4.com/q83vASNFZwAAAnGQ5QM`
 - URL-safe base64 (uses `-` and `_` instead of `+` and `/`)
 - Slightly shorter but may cause issues with some QR scanners
 

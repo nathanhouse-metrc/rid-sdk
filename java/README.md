@@ -44,21 +44,22 @@ dependencies {
 import com.retailid.*;
 
 // Create a batch ID
-ObjectId batchId = new ObjectId("1a4060300020081000006609");
+ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
 
 // Encode as Base36 (default, uppercase)
-String url = RetailId.encode(batchId, 1);
-// Result: "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+EncodeOptions options = new EncodeOptions().setDomain("d.1a4.com");
+String url = RetailId.encode(batchId, 485, options);
+// Result: "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 
 // Encode as Base64
-EncodeOptions options = new EncodeOptions().setBase64(true);
-String urlBase64 = RetailId.encode(batchId, 1, options);
-// Result: "https://1a4.com/GkBgMAAggQAABmCQ"
+EncodeOptions options = new EncodeOptions().setBase64(true).setDomain("d.1a4.com");
+String urlBase64 = RetailId.encode(batchId, 485, options);
+// Result: "https://d.1a4.com/q83vASNFZwAAAnGQ5QM"
 
 // Custom domain
-EncodeOptions customDomain = new EncodeOptions().setDomain("abc.com");
-String urlCustom = RetailId.encode(batchId, 1, customDomain);
-// Result: "HTTPS://ABC.COM/5LN8CBN1UB33DON9CHKX"
+EncodeOptions customDomain = new EncodeOptions().setDomain("d.1a4.com");
+String urlCustom = RetailId.encode(batchId, 485, customDomain);
+// Result: "HTTPS://d.1a4.com/10NOIEYKAJDG6CF0EXGJL"
 ```
 
 ### Decoding
@@ -67,13 +68,13 @@ String urlCustom = RetailId.encode(batchId, 1, customDomain);
 import com.retailid.*;
 
 // Decode a RetailID URL
-RetailIdPair pair = RetailId.decode("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
+RetailIdPair pair = RetailId.decode("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
 
 ObjectId batchId = pair.getBatchId();
 int index = pair.getIndex();
 
-System.out.println("Batch ID: " + batchId.toHexString());  // "1a4060300020081000006609"
-System.out.println("Index: " + index);                      // 1
+System.out.println("Batch ID: " + batchId.toHexString());  // "ABCDEF012345670000027190"
+System.out.println("Index: " + index);                      // 485
 ```
 
 ### Using RetailIdPair
@@ -82,7 +83,7 @@ System.out.println("Index: " + index);                      // 1
 import com.retailid.*;
 
 // Construct from URL
-RetailIdPair pair = new RetailIdPair("HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX");
+RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
 
 // Access properties
 ObjectId batchId = pair.getBatchId();
@@ -241,7 +242,7 @@ mvn install
 - Case-insensitive during decode
 - Produces uppercase URLs
 - Prefix: `HTTPS://`
-- Example: `HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX`
+- Example: `HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL`
 
 ### Base64 (Optional)
 

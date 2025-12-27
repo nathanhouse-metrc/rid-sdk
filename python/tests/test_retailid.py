@@ -22,13 +22,13 @@ class TestObjectId:
     """Tests for ObjectId class."""
 
     def test_create_from_hex_string(self):
-        oid = ObjectId("1a4060300020081000006609")
-        assert oid.to_hex_string() == "1a4060300020081000006609"
+        oid = ObjectId("ABCDEF012345670000027190")
+        assert oid.to_hex_string() == "ABCDEF012345670000027190"
 
     def test_create_from_bytes(self):
-        data = bytes.fromhex("1a4060300020081000006609")
+        data = bytes.fromhex("ABCDEF012345670000027190")
         oid = ObjectId(data)
-        assert oid.to_hex_string() == "1a4060300020081000006609"
+        assert oid.to_hex_string() == "ABCDEF012345670000027190"
 
     def test_create_random(self):
         oid = ObjectId()
@@ -48,8 +48,8 @@ class TestObjectId:
             ObjectId(b"\x00" * 10)
 
     def test_equals(self):
-        oid1 = ObjectId("1a4060300020081000006609")
-        oid2 = ObjectId("1a4060300020081000006609")
+        oid1 = ObjectId("ABCDEF012345670000027190")
+        oid2 = ObjectId("ABCDEF012345670000027190")
         oid3 = ObjectId("1a4060300020081000006610")
 
         assert oid1 == oid2
@@ -58,8 +58,8 @@ class TestObjectId:
         assert not oid1.equals(oid3)
 
     def test_equals_with_bytes(self):
-        oid = ObjectId("1a4060300020081000006609")
-        data = bytes.fromhex("1a4060300020081000006609")
+        oid = ObjectId("ABCDEF012345670000027190")
+        data = bytes.fromhex("ABCDEF012345670000027190")
         assert oid.equals(data)
 
 
@@ -102,7 +102,7 @@ class TestBase36:
     """Tests for Base36 encoding/decoding."""
 
     def test_encode_decode_roundtrip(self):
-        original = bytes.fromhex("1a4060300020081000006609")
+        original = bytes.fromhex("ABCDEF012345670000027190")
         encoded = encode_base36(original)
         decoded = decode_base36(encoded)
         # The decoded may have different length due to leading zeros
@@ -130,20 +130,20 @@ class TestUrl64:
 # Test cases matching JavaScript SDK
 TEST_CASES = [
     {
-        "url": "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX",
-        "expected_batch_id": "1a4060300020081000006609",
+        "url": "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL",
+        "expected_batch_id": "ABCDEF012345670000027190",
         "expected_index": 1,
         "description": "index 1 (36 chars)",
     },
     {
         "url": "HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT",
-        "expected_batch_id": "1a4060300020081000006609",
+        "expected_batch_id": "ABCDEF012345670000027190",
         "expected_index": 128,
         "description": "index 128 (38 chars)",
     },
     {
         "url": "HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D",
-        "expected_batch_id": "1a4060300020081000006609",
+        "expected_batch_id": "ABCDEF012345670000027190",
         "expected_index": 16384,
         "description": "index 16384 (39 chars)",
     },
@@ -162,7 +162,7 @@ class TestDecoding:
     def test_decode_legacy_base64_url(self):
         url = "https://1a4.com/GkBgMAAEG2AAAJKXEQ"
         pair = RetailIdPair(url)
-        assert pair.batch_id.to_hex_string().lower() == "1a40603000041b6000009297"
+        assert pair.batch_id.to_hex_string().lower() == "ABCDEF012345670000027190"
         assert pair.index == 17
 
 
@@ -192,7 +192,7 @@ class TestRoundTrip:
 
         # Decode again
         pair2 = RetailIdPair(encoded)
-        assert pair2.batch_id.to_hex_string().lower() == "1a40603000041b6000009297"
+        assert pair2.batch_id.to_hex_string().lower() == "ABCDEF012345670000027190"
         assert pair2.index == 17
 
     def test_roundtrip_legacy_base64_via_base36(self):
@@ -209,7 +209,7 @@ class TestRoundTrip:
 
         # Decode again
         pair2 = RetailIdPair(encoded)
-        assert pair2.batch_id.to_hex_string().lower() == "1a40603000041b6000009297"
+        assert pair2.batch_id.to_hex_string().lower() == "ABCDEF012345670000027190"
         assert pair2.index == 17
 
 
@@ -217,7 +217,7 @@ class TestDirectEncoding:
     """Tests for direct encoding with get_short_url."""
 
     def test_encode_objectid_and_index(self):
-        batch_id = ObjectId("1a4060300020081000006609")
+        batch_id = ObjectId("ABCDEF012345670000027190")
         url = get_short_url(batch_id, 1)
 
         # Should produce uppercase URL
@@ -225,11 +225,11 @@ class TestDirectEncoding:
 
         # Should decode back correctly
         pair = RetailIdPair(url)
-        assert pair.batch_id.to_hex_string().lower() == "1a4060300020081000006609"
+        assert pair.batch_id.to_hex_string().lower() == "ABCDEF012345670000027190"
         assert pair.index == 1
 
     def test_base36_is_default(self):
-        batch_id = ObjectId("1a4060300020081000006609")
+        batch_id = ObjectId("ABCDEF012345670000027190")
         url = get_short_url(batch_id, 1)
 
         # Should be uppercase base36 format
@@ -239,7 +239,7 @@ class TestDirectEncoding:
         assert data_part.isupper()
 
     def test_base64_when_requested(self):
-        batch_id = ObjectId("1a4060300020081000006609")
+        batch_id = ObjectId("ABCDEF012345670000027190")
         url = get_short_url(batch_id, 1, base64=True)
 
         # Should be lowercase https with URL-safe base64
@@ -279,13 +279,13 @@ class TestBackwardsCompatibility:
 
     def test_retail_id_pair_tag_property(self):
         """Test that the .tag property works for backwards compatibility."""
-        url = "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+        url = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
         pair = RetailIdPair(url)
-        assert pair.tag == "1a4060300020081000006609"
+        assert pair.tag == "ABCDEF012345670000027190"
 
     def test_retail_id_pair_batch_id_alias(self):
         """Test that .batchId works as an alias for .batch_id."""
-        url = "HTTPS://1A4.COM/5LN8CBN1UB33DON9CHKX"
+        url = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
         pair = RetailIdPair(url)
         assert pair.batchId == pair.batch_id
 
@@ -304,7 +304,7 @@ class TestEdgeCases:
     def test_shortcode_only(self):
         """Should handle just the shortcode without full URL."""
         pair = RetailIdPair("5LN8CBN1UB33DON9CHKX")
-        assert pair.batch_id.to_hex_string().lower() == "1a4060300020081000006609"
+        assert pair.batch_id.to_hex_string().lower() == "ABCDEF012345670000027190"
         assert pair.index == 1
 
 
