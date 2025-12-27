@@ -23,7 +23,7 @@ public class RetailIdTest {
         "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL,       ABCDEF012345670000027190, 1",
         "HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YCCH,     ABCDEF012345670000027190, 128",
         "HTTPS://D.1A4.COM/1FHPHPWI19S4JRYKFMYC8HS1,    ABCDEF012345670000027190, 16384",
-        "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGK1,          ABCDEF012345670000027190, 17"
+        "https://d.1a4.com/q83vASNFZwAAAnGQEQ,          ABCDEF012345670000027190, 17"
     })
     @DisplayName("Test vectors from JavaScript SDK")
     void testVectors(String url, String expectedBatchId, int expectedIndex) {
