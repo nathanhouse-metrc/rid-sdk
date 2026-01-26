@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
+import 'package:dart/src/extensions.dart';
 import 'package:equatable/equatable.dart';
 
 final class ObjectId extends Equatable {
@@ -44,12 +45,4 @@ final class ObjectId extends Equatable {
 
   @override
   List<Object?> get props => [_bytes];
-}
-
-extension on Uint8List {
-  Uint8List copy() {
-    final copy = Uint8List(length);
-    copy.setRange(0, length, this);
-    return copy;
-  }
 }
