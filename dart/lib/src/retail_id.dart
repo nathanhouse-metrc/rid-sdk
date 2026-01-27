@@ -31,8 +31,6 @@ final class RetailId {
     }
   }
 
-  // TODO retail id pair functions
-
   static ParsedId parseUrl(String url, bool strict) {
     if (url.isEmpty) {
       throw ArgumentError('URL cannot be empty');
