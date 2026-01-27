@@ -1,6 +1,4 @@
 import 'package:dart/dart.dart';
-import 'package:dart/src/encode_options.dart';
-import 'package:dart/src/retail_id.dart';
 import 'package:equatable/equatable.dart';
 
 final class RetailIdPair extends Equatable {

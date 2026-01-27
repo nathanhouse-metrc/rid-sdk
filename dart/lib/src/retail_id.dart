@@ -2,12 +2,6 @@ import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
 import 'package:dart/dart.dart';
-import 'package:dart/src/base_36.dart';
-import 'package:dart/src/encode_options.dart';
-import 'package:dart/src/parsed_id.dart';
-import 'package:dart/src/retail_id_pair.dart';
-import 'package:dart/src/url_encoder.dart';
-import 'package:dart/src/var_int.dart';
 
 enum _ValidationMode { strict, mongo, any }
 
@@ -158,8 +152,7 @@ final class RetailId {
     if (bytes.length < 4) {
       return false;
     }
-    final timestamp =
-        ((bytes[0] & 0xFF) << 24) |
+    final timestamp = ((bytes[0] & 0xFF) << 24) |
         ((bytes[1] & 0xFF) << 16) |
         ((bytes[2] & 0xFF) << 8) |
         (bytes[3] & 0xFF);
