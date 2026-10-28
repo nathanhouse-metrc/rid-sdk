@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "retailid"
 version = "0.10.0"
-description = "Decode and encode RetailID QR codes for supply chain package tracking"
+description = "Decode and encode RetailID QR codes and call the Metrc Retail ID API"
 readme = "README.md"
 license = "MIT"
 authors = [

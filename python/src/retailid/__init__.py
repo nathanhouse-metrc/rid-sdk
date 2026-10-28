@@ -15,6 +15,27 @@ import struct
 from datetime import datetime
 from typing import Optional, Union
 
+from .api import (
+    Allotment,
+    Association,
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    GenerateResult,
+    Issuance,
+    NotFoundError,
+    PackageInfo,
+    PermissionDeniedError,
+    RateLimitError,
+    ReceiveResult,
+    RetailIdApiError,
+    RetailIdClient,
+    RetailIdTimeoutError,
+    ServerError,
+    UnprocessableError,
+    short_code_from_url,
+)
+
 __version__ = "0.10.0"
 __all__ = [
     "ObjectId",
@@ -26,6 +47,25 @@ __all__ = [
     "encode_url64",
     "decode_url64",
     "get_short_url",
+    # Retail ID API client
+    "RetailIdClient",
+    "Association",
+    "Allotment",
+    "GenerateResult",
+    "Issuance",
+    "PackageInfo",
+    "ReceiveResult",
+    "RetailIdApiError",
+    "BadRequestError",
+    "AuthenticationError",
+    "PermissionDeniedError",
+    "NotFoundError",
+    "ConflictError",
+    "UnprocessableError",
+    "RateLimitError",
+    "ServerError",
+    "RetailIdTimeoutError",
+    "short_code_from_url",
 ]
 
 # Known RetailID prefixes
