@@ -1,0 +1,9 @@
+{
+    "vendor_api_key": "YOUR_VENDOR_API_KEY",
+    "user_api_key": "YOUR_USER_API_KEY",
+    "state_code": "md",
+    "base_url": null,
+    "timeout": 30,
+    "max_retries": 3,
+    "backoff_base": 1.0
+}

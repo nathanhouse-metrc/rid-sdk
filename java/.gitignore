@@ -87,3 +87,6 @@ Desktop.ini
 *.swo
 *.tmp
 *.temp
+
+# Retail ID API credentials (copy config.example.json)
+config.json
