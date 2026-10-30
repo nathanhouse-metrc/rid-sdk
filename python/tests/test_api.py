@@ -7,6 +7,8 @@ import json
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+import requests
+from requests.structures import CaseInsensitiveDict
 
 from retailid import (
     Association,
@@ -14,12 +16,15 @@ from retailid import (
     NotFoundError,
     RateLimitError,
     RetailIdClient,
+    RetailIdConfig,
+    RetailIdConfigError,
     RetailIdTimeoutError,
     ServerError,
     UnprocessableError,
+    errors,
+    load_config,
     short_code_from_url,
 )
-from retailid.api import HttpResponse
 
 LICENSE = "837-XYZ"
 LABEL = "1A4060300007777000000001"
@@ -29,47 +34,58 @@ QR_B = "https://1a4.com/ZScU6dsbUk98nsJEAB"
 QR_C = "https://1a4.com/ZScU6dsbUk98nsJEAC"
 
 
-class FakeTransport:
-    """Records requests and replays queued responses."""
+class FakeSession(requests.Session):
+    """
+    A real ``requests.Session`` whose ``send`` records the prepared request and
+    replays queued responses, so auth, query encoding and JSON bodies are built
+    by requests itself.
+    """
 
     def __init__(self, *responses):
+        super().__init__()
         self.responses = list(responses)
         self.calls = []
 
-    def __call__(self, method, url, headers, body, timeout):
-        parts = urlsplit(url)
+    def send(self, request, **kwargs):
+        parts = urlsplit(request.url)
         self.calls.append(
             {
-                "method": method,
+                "method": request.method,
                 "path": parts.path,
                 "query": {k: v[0] for k, v in parse_qs(parts.query).items()},
-                "headers": dict(headers),
-                "json": json.loads(body) if body else None,
+                "headers": dict(request.headers),
+                "json": json.loads(request.body) if request.body else None,
+                "timeout": kwargs.get("timeout"),
             }
         )
         response = self.responses.pop(0)
         if isinstance(response, BaseException):
             raise response
+        response.request = request
+        response.url = request.url
         return response
 
 
 def ok(payload, status=200, headers=None):
-    body = b"" if payload is None else json.dumps(payload).encode()
-    return HttpResponse(status, headers or {}, body)
+    response = requests.Response()
+    response.status_code = status
+    response.headers = CaseInsensitiveDict(headers or {})
+    response._content = b"" if payload is None else json.dumps(payload).encode()
+    return response
 
 
 def make_client(*responses, **kwargs):
-    transport = FakeTransport(*responses)
+    session = FakeSession(*responses)
     sleeps = []
     client = RetailIdClient(
         "vendor-key",
         "user-key",
         state_code="md",
-        transport=transport,
+        session=session,
         sleep=sleeps.append,
         **kwargs,
     )
-    return client, transport, sleeps
+    return client, session, sleeps
 
 
 class TestClientSetup:
@@ -94,6 +110,80 @@ class TestClientSetup:
         assert transport.calls[0]["headers"]["Authorization"] == f"Basic {expected}"
         assert "vendor-key" not in repr(client)
         assert "user-key" not in repr(client)
+
+    def test_timeout_is_passed_to_requests(self):
+        client, transport, _ = make_client(ok([]), timeout=12.5)
+        client.get_facilities()
+        assert transport.calls[0]["timeout"] == 12.5
+
+    def test_close_only_closes_owned_session(self):
+        session = FakeSession()
+        closed = []
+        session.close = lambda: closed.append(True)
+        with RetailIdClient("v", "u", state_code="md", session=session):
+            pass
+        assert closed == []
+        owned = RetailIdClient("v", "u", state_code="md")
+        assert isinstance(owned.session, requests.Session)
+        owned.close()
+
+
+class TestConfig:
+    def write(self, tmp_path, data):
+        path = tmp_path / "config.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def test_from_config_file(self, tmp_path):
+        path = self.write(
+            tmp_path,
+            {"vendor_api_key": "vendor-key", "user_api_key": "user-key", "state_code": "co",
+             "timeout": 5, "max_retries": 1},
+        )
+        session = FakeSession(ok([]))
+        client = RetailIdClient.from_config(path, session=session)
+        assert client.base_url == "https://api-co.metrc.com"
+        assert client.timeout == 5.0
+        assert client.max_retries == 1
+        client.get_facilities()
+        expected = base64.b64encode(b"vendor-key:user-key").decode()
+        assert session.calls[0]["headers"]["Authorization"] == f"Basic {expected}"
+
+    def test_base_url_and_env_var(self, tmp_path, monkeypatch):
+        path = self.write(
+            tmp_path,
+            {"vendor_api_key": "v", "user_api_key": "u", "base_url": "https://sandbox.example/"},
+        )
+        monkeypatch.setenv("RETAILID_CONFIG", str(path))
+        config = load_config()
+        assert config.base_url == "https://sandbox.example/"
+        assert RetailIdClient.from_config(config).base_url == "https://sandbox.example"
+
+    def test_repr_hides_keys(self):
+        config = RetailIdConfig("vendor-key", "user-key", state_code="md")
+        assert "vendor-key" not in repr(config)
+        assert "user-key" not in repr(config)
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            {"user_api_key": "u", "state_code": "md"},
+            {"vendor_api_key": "v", "user_api_key": "", "state_code": "md"},
+            {"vendor_api_key": "v", "user_api_key": "u"},
+            ["not", "an", "object"],
+        ],
+    )
+    def test_invalid_config(self, tmp_path, data):
+        with pytest.raises(RetailIdConfigError):
+            load_config(self.write(tmp_path, data))
+
+    def test_missing_and_malformed_file(self, tmp_path):
+        with pytest.raises(RetailIdConfigError, match="not found"):
+            load_config(tmp_path / "nope.json")
+        bad = tmp_path / "bad.json"
+        bad.write_text("{", encoding="utf-8")
+        with pytest.raises(RetailIdConfigError, match="not valid JSON"):
+            load_config(bad)
 
 
 class TestLabelPrinting:
@@ -356,13 +446,25 @@ class TestErrorsAndRetries:
         assert len(transport.calls) == 1
 
     def test_write_timeout_is_not_retried(self):
-        client, transport, _ = make_client(TimeoutError("timed out"))
+        client, transport, _ = make_client(requests.exceptions.ReadTimeout("timed out"))
         with pytest.raises(RetailIdTimeoutError) as exc:
             client.generate(LICENSE, LABEL, 1)
         assert exc.value.method == "POST"
         assert len(transport.calls) == 1
 
     def test_read_timeout_is_retried(self):
-        client, transport, _ = make_client(TimeoutError("timed out"), ok({"Eaches": [QR_A]}))
+        client, transport, _ = make_client(
+            requests.exceptions.ConnectTimeout("timed out"), ok({"Eaches": [QR_A]})
+        )
         assert client.receive(LICENSE, LABEL).eaches == [QR_A]
         assert len(transport.calls) == 2
+
+    def test_errors_module_maps_status(self):
+        err = errors.error_for_status(403, {"Message": "no access"}, {}, method="GET", path="/x")
+        assert isinstance(err, errors.PermissionDeniedError)
+        assert err.message == "no access"
+        assert isinstance(errors.error_for_status(503, None, {}), errors.ServerError)
+        assert type(errors.error_for_status(418, "teapot", {})) is errors.RetailIdApiError
+        limited = errors.error_for_status(429, None, CaseInsensitiveDict({"retry-after": "3"}))
+        assert isinstance(limited, RateLimitError)
+        assert limited.retry_after == 3.0

@@ -13,23 +13,38 @@ Wraps the endpoints described in the Retail ID API Integration Guide:
 Every request is authenticated with HTTP Basic auth using the vendor API key
 as the username and the user API key as the password. Keys are never logged.
 
-Only the standard library is used, so the SDK keeps zero runtime dependencies.
+HTTP is handled by `requests <https://requests.readthedocs.io/>`_. Errors live
+in :mod:`retailid.errors`; credentials can be loaded from ``config.json`` with
+:meth:`RetailIdClient.from_config`.
 """
 
 from __future__ import annotations
 
-import base64
-import json
 import logging
 import random
-import socket
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable
+
+import requests
+from requests.auth import HTTPBasicAuth
+
+from .config import PathLike, RetailIdConfig, load_config
+from .errors import (
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitError,
+    RetailIdApiError,
+    RetailIdTimeoutError,
+    ServerError,
+    UnprocessableError,
+    error_for_status,
+)
 
 __all__ = [
     "MAX_RECORDS_PER_REQUEST",
@@ -37,10 +52,12 @@ __all__ = [
     "Allotment",
     "Association",
     "GenerateResult",
-    "HttpResponse",
     "Issuance",
     "PackageInfo",
     "ReceiveResult",
+    "RetailIdClient",
+    "short_code_from_url",
+    # Re-exported from retailid.errors for convenience.
     "RetailIdApiError",
     "BadRequestError",
     "AuthenticationError",
@@ -51,8 +68,6 @@ __all__ = [
     "RateLimitError",
     "ServerError",
     "RetailIdTimeoutError",
-    "RetailIdClient",
-    "short_code_from_url",
 ]
 
 logger = logging.getLogger("retailid.api")
@@ -69,94 +84,6 @@ SALES_ENDPOINTS: Mapping[str, str] = {
 }
 
 JsonValue = Any
-
-
-# ---------------------------------------------------------------------------
-# Errors (section 11)
-# ---------------------------------------------------------------------------
-
-
-class RetailIdApiError(Exception):
-    """Raised when the Retail ID API returns a non-success status code."""
-
-    def __init__(
-        self,
-        status_code: int,
-        message: str,
-        *,
-        method: str = "",
-        path: str = "",
-        body: JsonValue = None,
-    ):
-        super().__init__(f"{status_code} {method} {path}: {message}".strip())
-        self.status_code = status_code
-        self.message = message
-        self.method = method
-        self.path = path
-        self.body = body
-
-
-class BadRequestError(RetailIdApiError):
-    """400: something in the request is missing or invalid."""
-
-
-class AuthenticationError(RetailIdApiError):
-    """401: the API keys were not accepted."""
-
-
-class PermissionDeniedError(RetailIdApiError):
-    """403: the keys work but lack Retail ID / Catalog permission or facility access."""
-
-
-class NotFoundError(RetailIdApiError):
-    """404: the address, package, or code was not found."""
-
-
-class ConflictError(RetailIdApiError):
-    """409: the request conflicts with the current state."""
-
-
-class UnprocessableError(RetailIdApiError):
-    """422: a business rule blocked the request (e.g. a rejected Package Merge)."""
-
-
-class RateLimitError(RetailIdApiError):
-    """429: too many requests."""
-
-    def __init__(self, *args: Any, retry_after: float | None = None, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self.retry_after = retry_after
-
-
-class ServerError(RetailIdApiError):
-    """5xx: a problem on Metrc's side."""
-
-
-class RetailIdTimeoutError(Exception):
-    """
-    Raised when a request times out or the connection drops before a reply.
-
-    For calls that change data (generate, associate, merge, sales) the request
-    may still have been applied. Check the current state (``get_packages_info``
-    or ``receive``) before resending.
-    """
-
-    def __init__(self, method: str, path: str, cause: BaseException):
-        super().__init__(f"{method} {path} timed out: {cause}")
-        self.method = method
-        self.path = path
-        self.cause = cause
-
-
-_ERRORS_BY_STATUS: dict[int, type[RetailIdApiError]] = {
-    400: BadRequestError,
-    401: AuthenticationError,
-    403: PermissionDeniedError,
-    404: NotFoundError,
-    409: ConflictError,
-    422: UnprocessableError,
-    429: RateLimitError,
-}
 
 
 # ---------------------------------------------------------------------------
@@ -280,40 +207,8 @@ class Association:
 
 
 # ---------------------------------------------------------------------------
-# Transport
+# Helpers
 # ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class HttpResponse:
-    """Minimal HTTP response used by the pluggable transport."""
-
-    status: int
-    headers: Mapping[str, str]
-    body: bytes
-
-
-Transport = Callable[[str, str, Mapping[str, str], Optional[bytes], float], HttpResponse]
-"""``(method, url, headers, body, timeout) -> HttpResponse``. Raise ``TimeoutError`` on timeout."""
-
-
-def _urllib_transport(
-    method: str,
-    url: str,
-    headers: Mapping[str, str],
-    body: bytes | None,
-    timeout: float,
-) -> HttpResponse:
-    request = urllib.request.Request(url, data=body, headers=dict(headers), method=method)
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return HttpResponse(response.status, dict(response.headers), response.read())
-    except urllib.error.HTTPError as e:
-        return HttpResponse(e.code, dict(e.headers or {}), e.read() or b"")
-    except urllib.error.URLError as e:
-        if isinstance(e.reason, (socket.timeout, TimeoutError)):
-            raise TimeoutError(str(e.reason)) from e
-        raise
 
 
 def short_code_from_url(qr_url_or_code: str) -> str:
@@ -353,7 +248,8 @@ class RetailIdClient:
 
     Example::
 
-        client = RetailIdClient(vendor_key, user_key, state_code="md")
+        client = RetailIdClient.from_config("config.json")
+        # or: RetailIdClient(vendor_key, user_key, state_code="md")
         result = client.generate("837-XYZ", "1A4060300007777000000001", quantity=3)
         received = client.receive("837-XYZ", "1A4060300007777000000001")
         for url in received.eaches:
@@ -363,6 +259,9 @@ class RetailIdClient:
     responses are retried only for GET/read calls. Calls that change data are
     never retried after a timeout or server error, because they may already
     have been applied (section 10 of the guide).
+
+    The client keeps a :class:`requests.Session` for connection reuse. Use it
+    as a context manager, or call :meth:`close`, to release connections.
     """
 
     def __init__(
@@ -375,7 +274,7 @@ class RetailIdClient:
         timeout: float = 30.0,
         max_retries: int = 3,
         backoff_base: float = 1.0,
-        transport: Transport | None = None,
+        session: requests.Session | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ):
         """
@@ -387,7 +286,8 @@ class RetailIdClient:
             timeout: Per-request timeout in seconds.
             max_retries: Maximum retries for retryable responses.
             backoff_base: Base delay in seconds when no ``Retry-After`` is sent.
-            transport: Optional HTTP transport, mainly for testing.
+            session: Optional ``requests.Session`` (e.g. with proxies or custom
+                adapters). It is not closed by :meth:`close`.
             sleep: Sleep function, mainly for testing.
         """
         if not vendor_api_key or not user_api_key:
@@ -400,14 +300,53 @@ class RetailIdClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff_base = backoff_base
-        self._transport: Transport = transport or _urllib_transport
+        self._owns_session = session is None
+        self.session = session if session is not None else requests.Session()
         self._sleep = sleep
-        token = base64.b64encode(f"{vendor_api_key}:{user_api_key}".encode()).decode("ascii")
-        self._auth_header = f"Basic {token}"
+        self._auth = HTTPBasicAuth(vendor_api_key, user_api_key)
+
+    @classmethod
+    def from_config(
+        cls,
+        config: RetailIdConfig | PathLike | None = None,
+        **kwargs: Any,
+    ) -> RetailIdClient:
+        """
+        Build a client from a ``config.json`` path or a :class:`RetailIdConfig`.
+
+        With no argument, reads ``$RETAILID_CONFIG`` or ``./config.json``.
+        Extra keyword arguments (``session``, ``timeout``, ...) are passed to
+        the constructor and override values from the file.
+
+        Raises:
+            RetailIdConfigError: if the file is missing or incomplete.
+        """
+        if not isinstance(config, RetailIdConfig):
+            config = load_config(config)
+        options: dict[str, Any] = {
+            "state_code": config.state_code,
+            "base_url": config.base_url,
+            "timeout": config.timeout,
+            "max_retries": config.max_retries,
+            "backoff_base": config.backoff_base,
+        }
+        options.update(kwargs)
+        return cls(config.vendor_api_key, config.user_api_key, **options)
 
     def __repr__(self) -> str:
         # Never expose keys.
         return f"RetailIdClient(base_url={self.base_url!r})"
+
+    def close(self) -> None:
+        """Close the underlying session if the client created it."""
+        if self._owns_session:
+            self.session.close()
+
+    def __enter__(self) -> RetailIdClient:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
 
     # -- low-level ---------------------------------------------------------
 
@@ -440,21 +379,21 @@ class RetailIdClient:
         if params:
             query.update({k: v for k, v in params.items() if v is not None})
         url = self.base_url + path
-        if query:
-            url += "?" + urllib.parse.urlencode(query)
-
-        headers = {"Authorization": self._auth_header, "Accept": "application/json"}
-        body: bytes | None = None
-        if json_body is not None:
-            body = json.dumps(json_body).encode("utf-8")
-            headers["Content-Type"] = "application/json"
 
         attempt = 0
         while True:
             started = time.monotonic()
             try:
-                response = self._transport(method, url, headers, body, self.timeout)
-            except (TimeoutError, socket.timeout) as e:
+                response = self.session.request(
+                    method,
+                    url,
+                    params=query or None,
+                    json=json_body,
+                    headers={"Accept": "application/json"},
+                    auth=self._auth,
+                    timeout=self.timeout,
+                )
+            except requests.Timeout as e:
                 logger.warning(
                     "%s %s license=%s timed out after %.2fs",
                     method, path, license_number, time.monotonic() - started,
@@ -467,12 +406,18 @@ class RetailIdClient:
 
             logger.debug(
                 "%s %s license=%s -> %d in %.2fs",
-                method, path, license_number, response.status, time.monotonic() - started,
+                method, path, license_number, response.status_code, time.monotonic() - started,
             )
-            if 200 <= response.status < 300:
-                return self._decode(response.body)
+            if 200 <= response.status_code < 300:
+                return self._decode(response)
 
-            error = self._error_for(method, path, response)
+            error = error_for_status(
+                response.status_code,
+                self._decode(response),
+                response.headers,
+                method=method,
+                path=path,
+            )
             retryable = error.status_code == 429 or (error.status_code >= 500 and idempotent)
             if retryable and attempt < self.max_retries:
                 attempt += 1
@@ -483,7 +428,7 @@ class RetailIdClient:
                 )
                 logger.info(
                     "%s %s -> %d, retrying in %.2fs (attempt %d/%d)",
-                    method, path, response.status, delay, attempt, self.max_retries,
+                    method, path, response.status_code, delay, attempt, self.max_retries,
                 )
                 self._sleep(delay)
                 continue
@@ -494,46 +439,14 @@ class RetailIdClient:
         return float(self.backoff_base * (2 ** (attempt - 1)) + random.uniform(0, 0.25))
 
     @staticmethod
-    def _decode(body: bytes) -> JsonValue:
+    def _decode(response: requests.Response) -> JsonValue:
+        body = response.content
         if not body or not body.strip():
             return None
         try:
-            return json.loads(body)
+            return response.json()
         except ValueError:
             return body.decode("utf-8", errors="replace")
-
-    def _error_for(self, method: str, path: str, response: HttpResponse) -> RetailIdApiError:
-        payload = self._decode(response.body)
-        message = ""
-        if isinstance(payload, Mapping):
-            message = str(payload.get("Message") or payload.get("message") or "")
-        elif isinstance(payload, list) and payload and isinstance(payload[0], Mapping):
-            message = "; ".join(
-                str(p.get("message") or p.get("Message") or "") for p in payload
-            )
-        elif isinstance(payload, str):
-            message = payload
-        if not message:
-            message = "Request failed"
-
-        status = response.status
-        if status == 429:
-            retry_after: float | None = None
-            header = next(
-                (v for k, v in response.headers.items() if k.lower() == "retry-after"), None
-            )
-            if header is not None:
-                try:
-                    retry_after = max(0.0, float(header))
-                except ValueError:
-                    retry_after = None
-            return RateLimitError(
-                status, message, method=method, path=path, body=payload, retry_after=retry_after
-            )
-        cls = _ERRORS_BY_STATUS.get(status)
-        if cls is None:
-            cls = ServerError if status >= 500 else RetailIdApiError
-        return cls(status, message, method=method, path=path, body=payload)
 
     def _paged(
         self,

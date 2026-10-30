@@ -18,22 +18,26 @@ from typing import Optional, Union
 from .api import (
     Allotment,
     Association,
+    GenerateResult,
+    Issuance,
+    PackageInfo,
+    ReceiveResult,
+    RetailIdClient,
+    short_code_from_url,
+)
+from .config import RetailIdConfig, load_config
+from .errors import (
     AuthenticationError,
     BadRequestError,
     ConflictError,
-    GenerateResult,
-    Issuance,
     NotFoundError,
-    PackageInfo,
     PermissionDeniedError,
     RateLimitError,
-    ReceiveResult,
     RetailIdApiError,
-    RetailIdClient,
+    RetailIdConfigError,
     RetailIdTimeoutError,
     ServerError,
     UnprocessableError,
-    short_code_from_url,
 )
 
 __version__ = "0.10.0"
@@ -55,6 +59,9 @@ __all__ = [
     "Issuance",
     "PackageInfo",
     "ReceiveResult",
+    "RetailIdConfig",
+    "load_config",
+    # Errors (retailid.errors)
     "RetailIdApiError",
     "BadRequestError",
     "AuthenticationError",
@@ -65,6 +72,7 @@ __all__ = [
     "RateLimitError",
     "ServerError",
     "RetailIdTimeoutError",
+    "RetailIdConfigError",
     "short_code_from_url",
 ]
 

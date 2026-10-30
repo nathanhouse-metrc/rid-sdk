@@ -16,6 +16,16 @@ Or with [uv](https://github.com/astral-sh/uv):
 uv pip install retailid
 ```
 
+From a checkout of this repository:
+
+```bash
+pip install -r requirements.txt   # runtime dependencies only (requests)
+pip install .                     # install the package via setup.py
+```
+
+The only runtime dependency is [`requests`](https://requests.readthedocs.io/), used by the
+Retail ID API client. The QR encode/decode functions use only the standard library.
+
 ## Quick Start
 
 ```python
@@ -103,15 +113,69 @@ get_short_url(batch_id: ObjectId | str, index: int,
 ## Retail ID API Client
 
 `RetailIdClient` calls the Metrc Retail ID endpoints (generate, info, receive, associate,
-merge, sales, catalog). It uses only the standard library. Requests use HTTP Basic auth:
-the vendor API key is the username and the user API key is the password. Keep both keys on
-your server; the client never logs them.
+merge, sales, catalog) using a [`requests.Session`](https://requests.readthedocs.io/). Requests
+use HTTP Basic auth: the vendor API key is the username and the user API key is the password.
+Keep both keys on your server; the client never logs them.
+
+### Configuration (`config.json`)
+
+Put the API keys in a `config.json` instead of in source code. Start from the template:
+
+```bash
+cp config.example.json config.json
+```
+
+```json
+{
+    "vendor_api_key": "YOUR_VENDOR_API_KEY",
+    "user_api_key": "YOUR_USER_API_KEY",
+    "state_code": "md",
+    "base_url": null,
+    "timeout": 30,
+    "max_retries": 3,
+    "backoff_base": 1.0
+}
+```
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `vendor_api_key` | yes | Vendor (software) API key |
+| `user_api_key` | yes | API key of the Metrc user making requests |
+| `state_code` | one of | Market code, e.g. `"md"` → `https://api-md.metrc.com` |
+| `base_url` | one of | Full base URL; overrides `state_code` (use for the Sandbox) |
+| `timeout` | no | Per-request timeout in seconds (default 30) |
+| `max_retries` | no | Retries for retryable responses (default 3) |
+| `backoff_base` | no | Base backoff delay in seconds (default 1.0) |
+
+`config.json` is listed in `.gitignore`; never commit real keys. `RetailIdClient.from_config()`
+reads the path you pass, else the file named by the `RETAILID_CONFIG` environment variable,
+else `./config.json`. A missing or incomplete file raises `RetailIdConfigError`.
+
+```python
+from retailid import RetailIdClient, load_config
+
+client = RetailIdClient.from_config()                     # $RETAILID_CONFIG or ./config.json
+client = RetailIdClient.from_config("/etc/metrc/config.json")
+client = RetailIdClient.from_config(load_config(), timeout=10)  # keyword args override the file
+
+# Keys can still be passed directly, e.g. from a secrets manager:
+client = RetailIdClient(vendor_key, user_key, state_code="md")
+```
+
+Pass `session=` to supply your own `requests.Session` (proxies, custom adapters, certificates).
+The client closes only sessions it created; use it as a context manager or call `close()`:
+
+```python
+with RetailIdClient.from_config() as client:
+    client.get_facilities()
+```
+
+### Usage
 
 ```python
 from retailid import RetailIdClient, Association
 
-client = RetailIdClient(VENDOR_KEY, USER_KEY, state_code="md")  # https://api-md.metrc.com
-# or: RetailIdClient(VENDOR_KEY, USER_KEY, base_url="https://<sandbox host>")
+client = RetailIdClient.from_config()
 
 license_number = "837-XYZ"
 label = "1A4060300007777000000001"
@@ -161,13 +225,16 @@ client.get_global_product(5)
 
 ### Errors, retries, and limits
 
-- Non-2xx responses raise a `RetailIdApiError` subclass: `BadRequestError` (400),
-  `AuthenticationError` (401), `PermissionDeniedError` (403), `NotFoundError` (404),
-  `ConflictError` (409), `UnprocessableError` (422), `RateLimitError` (429), `ServerError` (5xx).
+- Errors are defined in `retailid.errors` and re-exported from `retailid`. Non-2xx responses
+  raise a `RetailIdApiError` subclass: `BadRequestError` (400), `AuthenticationError` (401),
+  `PermissionDeniedError` (403), `NotFoundError` (404), `ConflictError` (409),
+  `UnprocessableError` (422), `RateLimitError` (429, with `retry_after`), `ServerError` (5xx).
+  Each carries `status_code`, `message`, `method`, `path`, and the decoded `body`.
+  `retailid.errors.error_for_status()` builds the matching error from a status and payload.
 - 429 is retried after the `Retry-After` delay (or an increasing backoff). Timeouts and 5xx
   are retried only for reads (GET and `packages/info`).
 - Calls that change data (`generate`, `associate`, `merge`, sales) are never retried
-  automatically. A timeout raises `RetailIdTimeoutError`: check the current state with
+  automatically. A timeout (`requests.Timeout`) raises `RetailIdTimeoutError`: check the current state with
   `get_packages_info` or `receive` before sending again.
 - List requests are capped at 10 records. `get_packages_info` splits larger lists for you;
   `associate` and `post_sales` raise `ValueError` instead, so you control each change.
@@ -204,8 +271,20 @@ RetailID supports two URL formats:
 
 ## Development
 
+Packaging metadata and dependencies are in `setup.py` (built with setuptools via
+`pyproject.toml`, which also holds the pytest/mypy/ruff config). `requirements.txt` lists the
+runtime dependencies; keep it in sync with `install_requires` in `setup.py`.
+
+```text
+src/retailid/
+    __init__.py   QR encode/decode, public exports
+    api.py        RetailIdClient (requests-based) and response models
+    config.py     config.json loading (RetailIdConfig, load_config)
+    errors.py     RetailIdApiError hierarchy, RetailIdTimeoutError, RetailIdConfigError
+```
+
 ```bash
-# Install dev dependencies
+# Install the package in editable mode with dev dependencies
 pip install -e ".[dev]"
 
 # Run tests

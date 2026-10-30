@@ -118,7 +118,9 @@ Works in Node.js and browsers. Provides TypeScript definitions.
 pip install retailid
 ```
 
-Requires Python 3.9+. Zero production dependencies.
+Requires Python 3.9+. The only runtime dependency is `requests` (for the Retail ID API client);
+the QR encode/decode functions use only the standard library. API keys are read from a
+`config.json` — see the [Python SDK README](./python/README.md#configuration-configjson).
 
 ### Java
 
