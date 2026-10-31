@@ -67,7 +67,7 @@ describe('label printing (Py TestLabelPrinting / Java LabelPrinting)', () => {
     ]);
     const [info] = await client.getPackagesInfo(LICENSE, [LABEL]);
     expect(info).toMatchObject({ packageLabel: LABEL, qrCount: 3, hasQrs: true, siblingCount: 0, requiresVerification: false, estimatedBalance: 3 });
-    expect(info!.issuances[0]).toMatchObject({ labelSet: 1, labelQuantity: 3, createdAt: '2026-10-21T00:00:00Z' });
+    expect(info!.issuances![0]).toMatchObject({ labelSet: 1, labelQuantity: 3, createdAt: '2026-10-21T00:00:00Z' });
     expect(calls[0]).toMatchObject({ method: 'POST', path: '/retailid/v2/packages/info', json: { packageLabels: [LABEL] } });
   });
 
@@ -91,8 +91,10 @@ describe('label printing (Py TestLabelPrinting / Java LabelPrinting)', () => {
     expect(infos).toHaveLength(3);
     expect(infos.map((info) => info.packageLabel)).toEqual(tags);
     expect(infos.map((info) => info.qrCount)).toEqual([5, 4, 0]);
-    expect(infos[0]!.issuances[0]!.labelQuantity).toBe(5);
-    expect(infos[2]!.issuances).toEqual([]);
+    expect(infos[0]!.issuances![0]!.labelQuantity).toBe(5);
+    expect(infos[1]!.issuances).toEqual([]);
+    // D2: an explicit `Issuances: null` is preserved as null, not converted to [].
+    expect(infos[2]!.issuances).toBeNull();
   });
 
   it('D7-02 getPackageInfo returns the documented Tag from a Packages envelope', async () => {

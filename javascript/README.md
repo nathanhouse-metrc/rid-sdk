@@ -289,7 +289,7 @@ const LABEL = '1A4060300007777000000001';
 
 const { issuanceId } = await client.generate(LICENSE, LABEL, 3);
 const received = await client.receive(LICENSE, LABEL);
-for (const url of received.eaches) printLabel(url);       // print exactly as returned
+for (const url of received.eaches ?? []) printLabel(url); // print exactly as returned
 
 await client.associatePackage(LICENSE, LABEL, ['https://1a4.com/ZScU6dsbUk98nsJEAA']);
 await client.merge(LICENSE, LABEL, '1A4080300007747000000001'); // target first
@@ -349,13 +349,13 @@ here. Parsing never invents values:
 
 | Response value | Result |
 |---|---|
-| Field absent or `null` | `null` (lists: `[]`) — never a fabricated `0`, `false`, or `""` |
+| Field absent or `null` (including lists such as `Eaches` or `Issuances`) | `null` — never a fabricated `0`, `false`, `""`, or `[]` |
 | Correct JSON type | used as-is |
 | Integer sent as a canonical string (`"5000"`) | accepted as `5000` |
 | Anything else (`"abc"`, `12.7`, `"false"` for a boolean, …) | `RetailIdResponseError` naming the field |
 
 > [!NOTE]
-> This policy is pending maintainer approval (decision D2) and deliberately differs from Python in
+> This is the confirmed D2 policy. It deliberately differs from Python in
 > places: Python defaults missing counts and flags to `0`/`False` and treats the string `"false"`
 > as true. If a response error occurs on a write, the write succeeded; inspect `error.body` and do
 > not resend.

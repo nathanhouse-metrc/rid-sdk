@@ -20,7 +20,7 @@ const field = (fn: () => unknown): string | null => {
   return 'NO ERROR';
 };
 
-describe('D2 response coercion policy (interim; pending approval)', () => {
+describe('D2 response coercion policy', () => {
   it('MD-01 integers: numbers and canonical integer strings only', () => {
     expect(Allotment.fromJson({ Allotment: 5000 }).allotment).toBe(5000);
     expect(Allotment.fromJson({ Allotment: '5000' }).allotment).toBe(5000);
@@ -41,8 +41,8 @@ describe('D2 response coercion policy (interim; pending approval)', () => {
 
   it('MD-03 absent and null scalars become null — never a fabricated 0 / false / ""', () => {
     const info = PackageInfo.fromJson({});
-    expect(info).toMatchObject({ packageLabel: null, qrCount: null, hasQrs: null, siblingCount: null, requiresVerification: null, estimatedBalance: null });
-    expect(info.issuances).toEqual([]);
+    expect(info).toMatchObject({ packageLabel: null, qrCount: null, hasQrs: null, issuanceId: null, siblingCount: null, requiresVerification: null, estimatedBalance: null });
+    expect(info.issuances).toBeNull();
     expect(Allotment.fromJson({ Allotment: null }).allotment).toBeNull();
     expect(GenerateResult.fromJson({}).issuanceId).toBeNull();
   });
@@ -53,8 +53,9 @@ describe('D2 response coercion policy (interim; pending approval)', () => {
     expect(field(() => PackageInfo.fromJson({ PackageLabel: 5 }))).toBe('PackageInfo.PackageLabel');
   });
 
-  it('MD-05 lists: absent/null -> [], non-array or wrong item type -> malformed', () => {
-    expect(ReceiveResult.fromJson({ Eaches: null }).eaches).toEqual([]);
+  it('MD-05 lists: absent/null -> null, non-array or wrong item type -> malformed', () => {
+    expect(ReceiveResult.fromJson({ Eaches: null }).eaches).toBeNull();
+    expect(ReceiveResult.fromJson({}).siblingTags).toBeNull();
     expect(field(() => ReceiveResult.fromJson({ Eaches: 'x' }))).toBe('ReceiveResult.Eaches');
     expect(field(() => ReceiveResult.fromJson({ SiblingTags: [1] }))).toBe('ReceiveResult.SiblingTags[0]');
     expect(field(() => PackageInfo.fromJson({ Issuances: [5] }))).toBe('PackageInfo.Issuances[0]');
@@ -82,9 +83,9 @@ describe('D2 response coercion policy (interim; pending approval)', () => {
     }
   });
 
-  it('MD-08 IssuanceId: strings, or safe integers rendered as strings; other types malformed', () => {
+  it('MD-08 IssuanceId: strings only; other types malformed (no number-to-string coercion)', () => {
     expect(GenerateResult.fromJson({ IssuanceId: 'abc' }).issuanceId).toBe('abc');
-    expect(GenerateResult.fromJson({ IssuanceId: 42 }).issuanceId).toBe('42');
+    expect(field(() => GenerateResult.fromJson({ IssuanceId: 42 }))).toBe('GenerateResult.IssuanceId');
     expect(field(() => GenerateResult.fromJson({ IssuanceId: true }))).toBe('GenerateResult.IssuanceId');
   });
 

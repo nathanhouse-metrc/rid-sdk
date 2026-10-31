@@ -3,12 +3,11 @@
 //
 // Response and request models.
 //
-// D2 coercion policy (interim — pending Nathan's approval; see README "Response
-// models"). Every field read goes through the readers below, so the policy
+// D2 coercion policy (confirmed; see README "Response models"). Every field read goes through the readers below, so the policy
 // lives in one place:
 //
-//   absent or null           -> null for scalars, [] for lists (never a
-//                               fabricated 0 / false / "")
+//   absent or null           -> null, for scalars AND lists (never a
+//                               fabricated 0 / false / "" / [])
 //   correctly typed value    -> used as-is
 //   integer as a JSON string -> accepted only if it is a canonical integer
 //                               ("5000"); Python int() and Java asInteger
@@ -64,10 +63,10 @@ function string(model: string, data: JsonObject, key: string): string | null {
   return malformed(model, key, 'a string', value);
 }
 
-/** @internal Array of strings; absent/null -> []. */
-function stringList(model: string, data: JsonObject, key: string): readonly string[] {
+/** @internal Array of strings; absent/null -> null. */
+function stringList(model: string, data: JsonObject, key: string): readonly string[] | null {
   const value = read(data, key);
-  if (value === undefined || value === null) return Object.freeze([]);
+  if (value === undefined || value === null) return null;
   if (!Array.isArray(value)) return malformed(model, key, 'an array', value);
   value.forEach((item, index) => {
     if (typeof item !== 'string') malformed(model, `${key}[${index}]`, 'a string', item);
@@ -75,10 +74,10 @@ function stringList(model: string, data: JsonObject, key: string): readonly stri
   return Object.freeze([...(value as string[])]);
 }
 
-/** @internal Array of objects; absent/null -> []. */
-function objectList(model: string, data: JsonObject, key: string): readonly JsonObject[] {
+/** @internal Array of objects; absent/null -> null. */
+function objectList(model: string, data: JsonObject, key: string): readonly JsonObject[] | null {
   const value = read(data, key);
-  if (value === undefined || value === null) return [];
+  if (value === undefined || value === null) return null;
   if (!Array.isArray(value)) return malformed(model, key, 'an array', value);
   value.forEach((item, index) => {
     if (!isJsonObject(item)) malformed(model, `${key}[${index}]`, 'an object', item);
@@ -130,7 +129,10 @@ export interface PackageInfo {
   readonly packageLabel: string | null;
   readonly qrCount: number | null;
   readonly hasQrs: boolean | null;
-  readonly issuances: readonly Issuance[];
+  /** Issuance ID reported on the package record (a string, as observed in QA2-E2); `null` if absent. */
+  readonly issuanceId: string | null;
+  /** Generate runs for the package; `null` when the API returns `Issuances: null` or omits it. */
+  readonly issuances: readonly Issuance[] | null;
   readonly siblingCount: number | null;
   readonly requiresVerification: boolean | null;
   readonly estimatedBalance: number | null;
@@ -139,9 +141,10 @@ export interface PackageInfo {
 
 /** A package's QR URLs and receiving status (`GET /retailid/v2/receive/...`). */
 export interface ReceiveResult {
-  /** QR URLs of the units; print one label per URL, exactly as returned. */
-  readonly eaches: readonly string[];
-  readonly siblingTags: readonly string[];
+  /** QR URLs of the units; print one label per URL, exactly as returned. `null` if absent or null. */
+  readonly eaches: readonly string[] | null;
+  /** `null` if absent or null. */
+  readonly siblingTags: readonly string[] | null;
   readonly requiresVerification: boolean | null;
   readonly childTag: string | null;
   readonly labelSource: string | null;
@@ -167,16 +170,10 @@ export const Allotment = Object.freeze({
 
 /** Parsers for {@link GenerateResult}. */
 export const GenerateResult = Object.freeze({
-  /** @throws RetailIdResponseError if `data` is not an object or `IssuanceId` is not a string/integer. */
+  /** @throws RetailIdResponseError if `data` is not an object or `IssuanceId` is present but not a string. */
   fromJson(data: unknown): GenerateResult {
     const obj = requireObject('GenerateResult', data);
-    const value = read(obj, 'IssuanceId');
-    let issuanceId: string | null;
-    if (value === undefined || value === null) issuanceId = null;
-    else if (typeof value === 'string') issuanceId = value;
-    else if (typeof value === 'number' && Number.isSafeInteger(value)) issuanceId = String(value);
-    else issuanceId = malformed('GenerateResult', 'IssuanceId', 'a string', value);
-    return Object.freeze({ issuanceId, raw: frozenRaw(obj) });
+    return Object.freeze({ issuanceId: string('GenerateResult', obj, 'IssuanceId'), raw: frozenRaw(obj) });
   },
 });
 
@@ -204,7 +201,8 @@ export const PackageInfo = Object.freeze({
         : (string('PackageInfo', obj, 'Label') || string('PackageInfo', obj, 'Tag') || null),
       qrCount: integer('PackageInfo', obj, 'QrCount'),
       hasQrs: boolean('PackageInfo', obj, 'HasQrs'),
-      issuances: Object.freeze(objectList('PackageInfo', obj, 'Issuances').map((i) => Issuance.fromJson(i))),
+      issuanceId: string('PackageInfo', obj, 'IssuanceId'),
+      issuances: issuanceList(objectList('PackageInfo', obj, 'Issuances')),
       siblingCount: integer('PackageInfo', obj, 'SiblingCount'),
       requiresVerification: boolean('PackageInfo', obj, 'RequiresVerification'),
       estimatedBalance: integer('PackageInfo', obj, 'EstimatedBalance'),
@@ -212,6 +210,9 @@ export const PackageInfo = Object.freeze({
     });
   },
 });
+
+const issuanceList = (items: readonly JsonObject[] | null): readonly Issuance[] | null =>
+  items === null ? null : Object.freeze(items.map((item) => Issuance.fromJson(item)));
 
 /** Parsers for {@link ReceiveResult}. */
 export const ReceiveResult = Object.freeze({

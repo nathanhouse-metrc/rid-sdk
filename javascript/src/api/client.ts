@@ -171,7 +171,7 @@ const isTimeoutError = (error: unknown): boolean =>
  * const client = new RetailIdClient({ vendorApiKey, userApiKey, stateCode: 'md' });
  * const issuance = await client.generate('837-XYZ', '1A4060300007777000000001', 3);
  * const received = await client.receive('837-XYZ', '1A4060300007777000000001');
- * for (const url of received.eaches) printLabel(url);
+ * for (const url of received.eaches ?? []) printLabel(url);
  * ```
  *
  * Server-side only: the client refuses to run in a browser, because it carries

@@ -236,7 +236,7 @@ const code: string = shortCodeFromUrl('https://1a4.com/ABC');
 export async function useApi(signal: AbortSignal): Promise<void> {
   const infos: PackageInfo[] = await client.getPackagesInfo('837-XYZ', ['1A4'], { signal });
   const received: ReceiveResult = await client.receive('837-XYZ', '1A4');
-  const urls: readonly string[] = received.eaches;
+  const urls: readonly string[] | null = received.eaches;
   const qrCount: number | null = infos[0]?.qrCount ?? null;
   const raw: JsonValue = await client.merge('837-XYZ', 'A', 'B');
   const config: RetailIdConfig = await loadConfig('config.json');
