@@ -23,7 +23,7 @@ const browserConfig = {
   plugins: [
     resolve({ browser: true }),
     commonjs(),
-    typescript({ tsconfig: './tsconfig.json' }),
+    typescript({ tsconfig: './tsconfig.build.json' }),
     terserPlugin,
   ],
 };
@@ -40,7 +40,7 @@ const esmConfig = {
   plugins: [
     resolve({ preferBuiltins: true }),
     commonjs(),
-    typescript({ tsconfig: './tsconfig.json', declaration: false }),
+    typescript({ tsconfig: './tsconfig.build.json', declaration: false }),
   ],
 };
 
@@ -56,7 +56,7 @@ const cjsConfig = {
   plugins: [
     resolve({ preferBuiltins: true }),
     commonjs(),
-    typescript({ tsconfig: './tsconfig.json', declaration: false }),
+    typescript({ tsconfig: './tsconfig.build.json', declaration: false }),
   ],
 };
 

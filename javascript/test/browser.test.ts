@@ -25,24 +25,27 @@ describe('RetailId Browser Bundle', () => {
     RetailId = (dom.window as any).RetailId;
   });
 
+  // Vectors for batch abcdef012345670000027190. Each was derived independently
+  // (12-byte batch + LEB128 index, big-endian base36) and cross-checked against
+  // the Python SDK. They match the Test Vectors table in README.md.
   const testCases = [
     {
       url: 'HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL',
       expectedBatchId: 'ABCDEF012345670000027190',
       expectedIndex: 1,
-      description: 'index 1 (36 chars)',
+      description: 'index 1 (1-byte varint)',
     },
     {
-      url: 'HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT',
+      url: 'HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YCCH',
       expectedBatchId: 'ABCDEF012345670000027190',
       expectedIndex: 128,
-      description: 'index 128 (38 chars)',
+      description: 'index 128 (2-byte varint)',
     },
     {
-      url: 'HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D',
+      url: 'HTTPS://D.1A4.COM/1FHPHPWI19S4JRYKFMYC8HS1',
       expectedBatchId: 'ABCDEF012345670000027190',
       expectedIndex: 16384,
-      description: 'index 16384 (39 chars)',
+      description: 'index 16384 (3-byte varint)',
     },
   ];
 
@@ -79,50 +82,95 @@ describe('RetailId Browser Bundle', () => {
       const batchId = new RetailId.ObjectId('ABCDEF012345670000027190');
       const url = RetailId.getShortUrl(batchId, 1);
 
-      // Should produce uppercase URL
+      // Should produce the exact uppercase Base36 URL for this batch and index
       expect(url).toMatch(/^HTTPS:\/\/1A4\.COM\//);
+      expect(url).toBe('HTTPS://1A4.COM/10NOIEYKAJDG6CF0EXGJL');
 
-      // Should decode back correctly
+      // Should decode back correctly (toHexString() returns lowercase hex)
       const pair = new RetailId.RetailIdPair(url);
-      expect(pair.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
+      expect(pair.batchId.toHexString()).toBe('abcdef012345670000027190');
       expect(pair.index).toBe(1);
     });
   });
 
   describe('Legacy Base64 URL decoding', () => {
+    // Legacy URL-safe Base64 vector for batch abcdef012345670000027190, index 17
+    // (independently derived; matches the Test Vectors table in README.md).
+    const legacyUrl = 'https://d.1a4.com/q83vASNFZwAAAnGQEQ';
+
     it('should decode legacy base64 URL', () => {
-      const url = 'https://1a4.com/GkBgMAAEG2AAAJKXEQ';
-      const pair = new RetailId.RetailIdPair(url);
-      expect(pair.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
+      const pair = new RetailId.RetailIdPair(legacyUrl);
+      expect(pair.batchId.toHexString()).toBe('abcdef012345670000027190');
       expect(pair.index).toBe(17);
     });
 
     it('should round-trip legacy base64 URL via base64 encoding', () => {
-      const url = 'https://1a4.com/GkBgMAAEG2AAAJKXEQ';
-      const pair = new RetailId.RetailIdPair(url);
+      const pair = new RetailId.RetailIdPair(legacyUrl);
 
-      // Re-encode as base64
+      // Re-encode as base64 (default domain)
       const encoded = pair.encode({ base64: true });
+      expect(encoded).toBe('https://1a4.com/q83vASNFZwAAAnGQEQ');
 
       // Decode again
       const pair2 = new RetailId.RetailIdPair(encoded);
-      expect(pair2.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
+      expect(pair2.batchId.toHexString()).toBe('abcdef012345670000027190');
       expect(pair2.index).toBe(17);
     });
 
     it('should round-trip legacy base64 URL via base36 encoding (default)', () => {
-      const url = 'https://1a4.com/GkBgMAAEG2AAAJKXEQ';
-      const pair = new RetailId.RetailIdPair(url);
+      const pair = new RetailId.RetailIdPair(legacyUrl);
 
       // Re-encode as base36 (default)
       const encoded = pair.encode();
 
-      // Should be uppercase base36
+      // Should be uppercase base36, exactly
       expect(encoded).toMatch(/^HTTPS:\/\/1A4\.COM\/[A-Z0-9]+$/);
+      expect(encoded).toBe('HTTPS://1A4.COM/10NOIEYKAJDG6CF0EXGK1');
 
       // Decode again
       const pair2 = new RetailId.RetailIdPair(encoded);
-      expect(pair2.batchId.toHexString().toLowerCase()).toBe('ABCDEF012345670000027190');
+      expect(pair2.batchId.toHexString()).toBe('abcdef012345670000027190');
+      expect(pair2.index).toBe(17);
+    });
+  });
+
+  // Production-prefix vectors: batch IDs starting with the known RetailID prefix
+  // "1a4". These are the original URLs from earlier versions of this suite, now
+  // asserted against their actual decoded batch IDs and indexes. Each value was
+  // derived independently (12-byte batch + LEB128 index) and cross-checked
+  // against the Python SDK. Decoding uses strict mode (known prefix required).
+  describe('Production-prefix (1a4) vectors', () => {
+    it('should decode Base36 index 128 and re-encode to the identical URL', () => {
+      const url = 'HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT';
+      const pair = new RetailId.RetailIdPair(url, true);
+      expect(pair.batchId.toHexString()).toBe('1a4060300020081000006609');
+      expect(pair.index).toBe(128);
+      expect(pair.encode()).toBe(url);
+    });
+
+    it('should decode Base36 index 16384 and re-encode to the identical URL', () => {
+      const url = 'HTTPS://1A4.COM/7V8S42PYJD1XC9C2UVNCD1D';
+      const pair = new RetailId.RetailIdPair(url, true);
+      expect(pair.batchId.toHexString()).toBe('1a4060300020081000006609');
+      expect(pair.index).toBe(16384);
+      expect(pair.encode()).toBe(url);
+    });
+
+    it('should decode legacy Base64 index 17 and re-encode to the identical URL', () => {
+      const url = 'https://1a4.com/GkBgMAAEG2AAAJKXEQ';
+      const pair = new RetailId.RetailIdPair(url, true);
+      expect(pair.batchId.toHexString()).toBe('1a40603000041b6000009297');
+      expect(pair.index).toBe(17);
+      expect(pair.encode({ base64: true })).toBe(url);
+    });
+
+    it('should re-encode the legacy Base64 label as its exact Base36 equivalent', () => {
+      const pair = new RetailId.RetailIdPair('https://1a4.com/GkBgMAAEG2AAAJKXEQ', true);
+      const base36 = pair.encode();
+      expect(base36).toBe('HTTPS://1A4.COM/5LN8CBN1F0QEADZAUAKX');
+
+      const pair2 = new RetailId.RetailIdPair(base36, true);
+      expect(pair2.batchId.toHexString()).toBe('1a40603000041b6000009297');
       expect(pair2.index).toBe(17);
     });
   });
