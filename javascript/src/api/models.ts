@@ -126,7 +126,7 @@ export interface Issuance {
 
 /** Retail ID details for a package (`POST /retailid/v2/packages/info`). */
 export interface PackageInfo {
-  /** `PackageLabel`, or `Label` when `PackageLabel` is absent or empty (as in Python). */
+  /** Package identifier: `PackageLabel`, then `Label`, then documented `Tag` fallback. */
   readonly packageLabel: string | null;
   readonly qrCount: number | null;
   readonly hasQrs: boolean | null;
@@ -199,7 +199,9 @@ export const PackageInfo = Object.freeze({
     const obj = requireObject('PackageInfo', data);
     const primary = string('PackageInfo', obj, 'PackageLabel');
     return Object.freeze({
-      packageLabel: primary !== null && primary !== '' ? primary : string('PackageInfo', obj, 'Label'),
+      packageLabel: primary !== null && primary !== ''
+        ? primary
+        : (string('PackageInfo', obj, 'Label') || string('PackageInfo', obj, 'Tag') || null),
       qrCount: integer('PackageInfo', obj, 'QrCount'),
       hasQrs: boolean('PackageInfo', obj, 'HasQrs'),
       issuances: Object.freeze(objectList('PackageInfo', obj, 'Issuances').map((i) => Issuance.fromJson(i))),

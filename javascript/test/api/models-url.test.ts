@@ -67,6 +67,15 @@ describe('D2 response coercion policy (interim; pending approval)', () => {
     expect(PackageInfo.fromJson({ Label: 'L' }).packageLabel).toBe('L');
   });
 
+  it('D7-04 recognizes documented Tag, preserves legacy precedence, and rejects malformed names', () => {
+    expect(PackageInfo.fromJson({ Tag: 'T' }).packageLabel).toBe('T');
+    expect(PackageInfo.fromJson({ PackageLabel: 'P', Label: 'L', Tag: 'T' }).packageLabel).toBe('P');
+    expect(PackageInfo.fromJson({ PackageLabel: '', Label: 'L', Tag: 'T' }).packageLabel).toBe('L');
+    expect(PackageInfo.fromJson({ PackageLabel: null, Label: '', Tag: 'T' }).packageLabel).toBe('T');
+    expect(field(() => PackageInfo.fromJson({ Tag: 5 }))).toBe('PackageInfo.Tag');
+    expect(field(() => PackageInfo.fromJson({ PackageLabel: 5, Tag: 'T' }))).toBe('PackageInfo.PackageLabel');
+  });
+
   it('MD-07 the whole body must be an object', () => {
     for (const bad of [null, [], 'text', 5]) {
       expect(field(() => ReceiveResult.fromJson(bad))).toBe('ReceiveResult');

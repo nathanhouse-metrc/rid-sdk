@@ -79,6 +79,34 @@ describe('label printing (Py TestLabelPrinting / Java LabelPrinting)', () => {
     expect(await client.getPackageInfo(LICENSE, LABEL)).toBeUndefined();
   });
 
+  it('D7-01 accepts documented { Packages: [...] } envelope with Tag identifiers', async () => {
+    const tags = [LABEL, `${LABEL.slice(0, -1)}2`, `${LABEL.slice(0, -1)}3`];
+    const { client, calls } = makeClient([ok({ Packages: [
+      { Tag: tags[0], QrCount: 5, EstimatedBalance: 5, Issuances: [{ LabelSet: 0, LabelQuantity: 5, CreatedAt: '2014-11-19T00:00:00+00:00' }], HasQrs: true, RequiresVerification: true },
+      { Tag: tags[1], QrCount: 4, EstimatedBalance: 0, Issuances: [], HasQrs: true, RequiresVerification: false },
+      { Tag: tags[2], QrCount: 0, Issuances: null, HasQrs: false, RequiresVerification: false },
+    ] })]);
+    const infos = await client.getPackagesInfo(LICENSE, tags);
+    expect(calls[0]!.json).toEqual({ packageLabels: tags });
+    expect(infos).toHaveLength(3);
+    expect(infos.map((info) => info.packageLabel)).toEqual(tags);
+    expect(infos.map((info) => info.qrCount)).toEqual([5, 4, 0]);
+    expect(infos[0]!.issuances[0]!.labelQuantity).toBe(5);
+    expect(infos[2]!.issuances).toEqual([]);
+  });
+
+  it('D7-02 getPackageInfo returns the documented Tag from a Packages envelope', async () => {
+    const { client } = makeClient([ok({ Packages: [{ Tag: LABEL, QrCount: 5 }] })]);
+    expect(await client.getPackageInfo(LICENSE, LABEL)).toMatchObject({ packageLabel: LABEL, qrCount: 5 });
+  });
+
+  it('D7-03 rejects malformed Packages envelopes instead of treating them as a package', async () => {
+    const { client } = makeClient([ok({ Packages: {} }), ok({ Packages: 'not-an-array' }), ok({ Packages: null })]);
+    await expect(client.getPackagesInfo(LICENSE, [LABEL])).rejects.toThrow(RetailIdResponseError);
+    await expect(client.getPackagesInfo(LICENSE, [LABEL])).rejects.toThrow(RetailIdResponseError);
+    expect(await client.getPackagesInfo(LICENSE, [LABEL])).toEqual([]);
+  });
+
   it('LP-07 sends package labels in chunks of 10, in order', async () => {
     const labels = Array.from({ length: 23 }, (_, i) => `1A40603000077770000000${String(i).padStart(2, '0')}`);
     const { client, calls } = makeClient([ok([]), ok([]), ok([])]);

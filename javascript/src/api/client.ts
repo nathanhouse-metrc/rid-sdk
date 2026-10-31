@@ -664,13 +664,18 @@ function dataList(data: JsonValue, what: string): JsonValue[] {
   throw shapeError(what, 'an array or { Data: [...] }', data);
 }
 
-/** Array, `{ Data: [...] }`, or a single bare object (Python behaviour). */
+/** Packages/info response: documented `{ Packages: [...] }` plus legacy array/Data/bare-object shapes. */
 function packageInfoList(data: JsonValue): PackageInfo[] {
   if (data === null) return [];
   let items: JsonValue;
-  if (isJsonObject(data)) items = hasOwn(data, 'Data') ? (data['Data'] ?? []) : [data];
-  else items = data;
-  if (!Array.isArray(items)) throw shapeError('packages/info', 'an array, object, or { Data: [...] }', data);
+  if (isJsonObject(data)) {
+    if (hasOwn(data, 'Packages')) items = data['Packages'] ?? [];
+    else if (hasOwn(data, 'Data')) items = data['Data'] ?? [];
+    else items = [data];
+  } else items = data;
+  if (!Array.isArray(items)) {
+    throw shapeError('packages/info', 'an array, object, { Packages: [...] }, or { Data: [...] }', data);
+  }
   return items.map((item) => PackageInfo.fromJson(item));
 }
 
