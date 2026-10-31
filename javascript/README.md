@@ -186,6 +186,184 @@ Decoded RetailID representation.
 
 ---
 
+## Retail ID API Client (server-side)
+
+`@metrc/retailid/api` is a typed client for the Metrc Retail ID API. It mirrors the Python
+(`retailid.api`) and Java (`com.retailid.api`) clients method for method. It has zero runtime
+dependencies and uses the native `fetch`.
+
+> [!IMPORTANT]
+> **Server-side only (Node.js 22+).** The client carries your vendor and user API keys and refuses
+> to run in a browser. It is not part of the CDN bundle. Never send API keys to a browser, put them
+> in URLs, or commit them; keep `config.json` out of version control.
+
+### Imports
+
+```js
+// ESM
+import { RetailIdClient, NotFoundError } from '@metrc/retailid/api';
+import { loadConfig, createClientFromConfigFile } from '@metrc/retailid/node';
+
+// CommonJS
+const { RetailIdClient } = require('@metrc/retailid/api');
+const { createClientFromConfigFile } = require('@metrc/retailid/node');
+```
+
+| Entry point | Contents | Environment |
+|---|---|---|
+| `@metrc/retailid` | QR encoding/decoding (unchanged) | Browser and Node |
+| `@metrc/retailid/api` | `RetailIdClient`, models, errors, `RetailIdConfig` | Node.js 22+ (no Node built-ins imported) |
+| `@metrc/retailid/node` | `loadConfig`, `createClientFromConfigFile` (reads files) | Node.js 22+ |
+
+### Authentication and configuration
+
+Requests use HTTP Basic authentication, with the **vendor (software) API key** as the username and
+the **user API key** as the password. The keys are held in private fields and never appear in
+`toString()`, `util.inspect`, `JSON.stringify`, error messages, or log output.
+
+```js
+const client = new RetailIdClient({
+  vendorApiKey: process.env.METRC_VENDOR_KEY,
+  userApiKey: process.env.METRC_USER_KEY,
+  stateCode: 'md',          // -> https://api-md.metrc.com
+  // baseUrl: 'https://sandbox-api-md.metrc.com',  // overrides stateCode (Sandbox, proxies)
+  timeoutMs: 30_000,        // per attempt, including reading the body (default 30 000)
+  maxRetries: 3,            // default 3
+  backoffBaseMs: 1_000,     // default 1 000
+});
+```
+
+Or load the **shared `config.json`** used by the Python and Java clients. Copy
+[`config.example.json`](./config.example.json). Its keys are snake_case and its durations are in
+**seconds**; they are converted to milliseconds when the client is created.
+
+```json
+{
+  "vendor_api_key": "your-vendor-api-key",
+  "user_api_key": "your-user-api-key",
+  "state_code": "md",
+  "base_url": null,
+  "timeout": 30,
+  "max_retries": 3,
+  "backoff_base": 1.0
+}
+```
+
+```js
+// path argument, else $RETAILID_CONFIG, else ./config.json
+const client = await createClientFromConfigFile('config.json', { maxRetries: 1 }); // overrides in ms
+```
+
+Validation is strict. A wrongly typed option throws `TypeError`; a disallowed value throws
+`RangeError`. Nothing is coerced, so `"3"` is not accepted where a number is expected.
+
+### Methods
+
+Every method returns a Promise. The last argument is an optional `{ signal }` for cancellation;
+`postSales` and the global-product methods accept extra options in the same object.
+
+| Method | HTTP | Retried after 5xx / timeout? |
+|---|---|---|
+| `getFacilities()` | `GET /facilities/v2/` | yes |
+| `getAllotment(license)` → `Allotment[]` | `GET /retailid/v2/allotment` | yes |
+| `generate(license, label, quantity)` → `GenerateResult` | `POST /retailid/v2/generate` | **no** (write) |
+| `getPackagesInfo(license, labels)` → `PackageInfo[]` | `POST /retailid/v2/packages/info` (batches of 10) | yes (read-only POST) |
+| `getPackageInfo(license, label)` → `PackageInfo \| undefined` | same | yes |
+| `getAvailableTags(license)` | `GET /tags/v2/package/available` | yes |
+| `getPackage(license, idOrLabel)` | `GET /packages/v2/{idOrLabel}` | yes |
+| `receive(license, label)` → `ReceiveResult` | `GET /retailid/v2/receive/{label}` | yes |
+| `receiveByQr(license, qrUrlOrShortCode)` → `ReceiveResult` | `GET /retailid/v2/receive/qr/{shortCode}` | yes |
+| `associate(license, associations)` | `POST /retailid/v2/associate` (1–10 entries) | **no** (write) |
+| `associatePackage(license, label, qrUrls)` | same | **no** (write) |
+| `merge(license, target, source)` | `POST /retailid/v2/merge` | **no** (write) |
+| `postSales(license, records, { endpoint })` | `POST` to a `SALES_ENDPOINTS` path (1–10 records) | **no** (write) |
+| `postSalesReceipts(license, receipts)` | `POST /sales/v2/receipts` | **no** (write) |
+| `iterGlobalProducts(brandId, { pageSize })` | `GET /globalproducts/v2` (lazy, all pages) | yes |
+| `getGlobalProducts(brandId, { pageSize })` | same, collected | yes |
+| `getGlobalProduct(productId)` | `GET /globalproducts/v2/{id}` | yes |
+| `request(method, path, { licenseNumber, params, body, idempotent })` | any | if `idempotent` (default: GET) |
+
+```js
+const LICENSE = '837-XYZ';
+const LABEL = '1A4060300007777000000001';
+
+const { issuanceId } = await client.generate(LICENSE, LABEL, 3);
+const received = await client.receive(LICENSE, LABEL);
+for (const url of received.eaches) printLabel(url);       // print exactly as returned
+
+await client.associatePackage(LICENSE, LABEL, ['https://1a4.com/ZScU6dsbUk98nsJEAA']);
+await client.merge(LICENSE, LABEL, '1A4080300007747000000001'); // target first
+
+for await (const product of client.iterGlobalProducts(77)) console.log(product);
+```
+
+### Errors, retries, timeouts, and cancellation
+
+```
+RetailIdError
+├─ RetailIdApiError (statusCode, apiMessage, method, path, body)
+│   ├─ BadRequestError 400   ├─ NotFoundError 404      ├─ RateLimitError 429 (retryAfterMs)
+│   ├─ AuthenticationError 401 ├─ ConflictError 409    └─ ServerError 5xx
+│   └─ PermissionDeniedError 403 └─ UnprocessableError 422
+├─ RetailIdTimeoutError (method, path, timeoutMs, cause)
+├─ RetailIdNetworkError (method, path, cause)
+├─ RetailIdResponseError (field, statusCode, body) — a 2xx body that breaks the contract
+└─ RetailIdConfigError
+```
+
+Messages read `"404 GET /retailid/v2/receive/1A4…: Package not found"`. `apiMessage` holds the
+API's own text.
+
+Retries follow the same policy as the Python and Java clients:
+- **429** is retried for every method, waiting the numeric `Retry-After` when present. A 429
+  means the request was rejected, not applied.
+- **5xx and timeouts** are retried only for read-only calls.
+- **Writes** (`generate`, `associate`, `merge`, sales) are **never** retried after a 5xx, a
+  timeout, or a network failure, because they may already have been applied. After a
+  `RetailIdTimeoutError` on a write, check state (`getPackagesInfo` / `receive`) before resending.
+- **Network failures** (`RetailIdNetworkError`) are never retried. The original error is
+  available as `cause`.
+- **Backoff** without `Retry-After` is `backoffBaseMs × 2^(attempt−1) + 0–250 ms`.
+
+`timeoutMs` applies to each attempt, including reading the body. To cancel a call, pass a
+standard `AbortSignal`. Cancellation also stops any backoff wait, and the call rejects with the
+signal's own reason:
+
+```js
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 5_000);
+try {
+  await client.getPackagesInfo(LICENSE, labels, { signal: controller.signal });
+} catch (error) {
+  if (error instanceof NotFoundError) { /* ... */ }
+  else if (error?.name === 'AbortError') { /* cancelled by the caller */ }
+  else throw error;
+}
+```
+
+### Response models
+
+`Allotment`, `GenerateResult`, `PackageInfo` (with `Issuance[]`) and `ReceiveResult` are frozen
+objects with camelCase fields. Each keeps the full response in `raw`, including fields not modeled
+here. Parsing never invents values:
+
+| Response value | Result |
+|---|---|
+| Field absent or `null` | `null` (lists: `[]`) — never a fabricated `0`, `false`, or `""` |
+| Correct JSON type | used as-is |
+| Integer sent as a canonical string (`"5000"`) | accepted as `5000` |
+| Anything else (`"abc"`, `12.7`, `"false"` for a boolean, …) | `RetailIdResponseError` naming the field |
+
+> [!NOTE]
+> This policy is pending maintainer approval (decision D2) and deliberately differs from Python in
+> places: Python defaults missing counts and flags to `0`/`False` and treats the string `"false"`
+> as true. If a response error occurs on a write, the write succeeded; inspect `error.body` and do
+> not resend.
+
+Request and response wire formats follow the Python implementation. Formats not yet confirmed
+against the Retail ID API Integration Guide are listed in the parity matrix that accompanies this
+client.
+
 ## Bundle Formats
 
 | Format | File | Use |
@@ -195,6 +373,8 @@ Decoded RetailID representation.
 | Browser | `dist/retailid.min.js` | Script tag (IIFE) |
 | Types (ESM) | `dist/index.d.ts` | TypeScript definitions for `import` |
 | Types (CJS) | `dist/index.d.cts` | TypeScript definitions for `require()` |
+| API client (ESM / CJS) | `dist/api/index.js` / `dist/api/index.cjs` | `@metrc/retailid/api` (server-side, not in the CDN bundle) |
+| Node helpers (ESM / CJS) | `dist/node/index.js` / `dist/node/index.cjs` | `@metrc/retailid/node` |
 
 ---
 
@@ -223,6 +403,11 @@ npm run build
 
 # Run tests (builds first; the browser test runs against dist/retailid.min.js)
 npm test
+
+# Coverage report for the API client (src/api, src/node). The provider is installed
+# on demand, not committed, so the dependency tree stays minimal.
+npm install --no-save @vitest/coverage-v8@3.2.7
+npx vitest run --coverage
 
 # Verify the packed package: contents, ESM/CJS exports, and TypeScript resolution
 npm run verify:package
