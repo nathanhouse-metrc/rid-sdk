@@ -2,3 +2,7 @@ node_modules
 /dist
 /demo-local.html
 /publish.sh
+
+# Retail ID API credentials (copy config.example.json)
+config.json
+/coverage

@@ -5,9 +5,11 @@
 //
 //   1. `npm pack` contents match the expected file list exactly.
 //   2. The packed tarball installs into a throwaway project.
-//   3. ESM `import` and CJS `require` expose exactly the public QR exports and
-//      decode a known vector.
-//   4. TypeScript resolves the declarations under every common module mode.
+//   3. ESM `import` and CJS `require` expose exactly the public exports of
+//      every entry point (`.`, `./api`, `./node`), decode a known QR vector, and
+//      share one class identity between `./api` and `./node`.
+//   4. TypeScript resolves the declarations of every entry point under every
+//      common module mode.
 //
 // Run after `npm run build`: `npm run verify:package`.
 // Nothing is published; all work happens in a temporary directory.
@@ -47,10 +49,24 @@ const npmCli = (() => {
   return found;
 })();
 
+const API_DECLARATION_MODULES = ['client', 'config', 'constants', 'errors', 'index', 'json', 'models', 'url', 'validate'];
 const EXPECTED_FILES = [
   'README.md',
+  ...API_DECLARATION_MODULES.flatMap((m) => [`dist/api/${m}.d.cts`, `dist/api/${m}.d.ts`]),
+  'dist/api/index.cjs',
+  'dist/api/index.cjs.map',
+  'dist/api/index.js',
+  'dist/api/index.js.map',
   'dist/index.d.cts',
   'dist/index.d.ts',
+  'dist/node/index.cjs',
+  'dist/node/index.cjs.map',
+  'dist/node/index.d.cts',
+  'dist/node/index.d.ts',
+  'dist/node/index.js',
+  'dist/node/index.js.map',
+  'dist/node/load-config.d.cts',
+  'dist/node/load-config.d.ts',
   'dist/retailid.cjs',
   'dist/retailid.cjs.map',
   'dist/retailid.esm.js',
@@ -71,6 +87,16 @@ const EXPECTED_EXPORTS = [
   'getShortUrl',
   'testBase36',
 ];
+
+// Public runtime exports of @metrc/retailid/api and @metrc/retailid/node.
+const API_EXPORTS = [
+  'Allotment', 'Association', 'AuthenticationError', 'BadRequestError', 'CONFIG_ENV_VAR', 'ConflictError',
+  'DEFAULT_CONFIG_FILE', 'GenerateResult', 'Issuance', 'MAX_RECORDS_PER_REQUEST', 'NotFoundError', 'PackageInfo',
+  'PermissionDeniedError', 'RateLimitError', 'ReceiveResult', 'RetailIdApiError', 'RetailIdClient', 'RetailIdConfig',
+  'RetailIdConfigError', 'RetailIdError', 'RetailIdNetworkError', 'RetailIdResponseError', 'RetailIdTimeoutError',
+  'SALES_ENDPOINTS', 'ServerError', 'UnprocessableError', 'errorForStatus', 'shortCodeFromUrl',
+];
+const NODE_EXPORTS = ['createClientFromConfigFile', 'loadConfig'];
 
 // Base36 vector for batch abcdef012345670000027190, index 1.
 const VECTOR_URL = 'HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL';
@@ -101,6 +127,7 @@ const run = (command, args, cwd) => {
 const node = (args, cwd) => run(process.execPath, args, cwd);
 const npm = (args, cwd) => node([npmCli, ...args], cwd);
 const sameList = (actual, expected, label) => {
+  expected = [...expected].sort();
   const missing = expected.filter((x) => !actual.includes(x));
   const extra = actual.filter((x) => !expected.includes(x));
   if (missing.length || extra.length) {
@@ -148,6 +175,36 @@ try {
     verifyRuntime(node(['-e', `const m = require('@metrc/retailid');${probe}`], consumer)),
   );
 
+  // API and Node entry points: exact exports, a real call through a stub fetch
+  // (no network), and one class identity across ./api and ./node.
+  const apiProbe = `
+    const keysOf = (x) => Object.keys(x).filter((k) => k !== 'default' && k !== '__esModule').sort();
+    const client = new api.RetailIdClient({ vendorApiKey: 'v', userApiKey: 'u', stateCode: 'md',
+      fetch: async () => new Response(JSON.stringify({ Eaches: ['https://1a4.com/ABC'] })) });
+    const received = await client.receiveByQr('837-XYZ', 'https://1a4.com/ABC');
+    const configError = await nodeEntry.loadConfig('definitely-missing-config.json').catch((e) => e);
+    console.log(JSON.stringify({
+      api: keysOf(api), node: keysOf(nodeEntry), eaches: received.eaches,
+      sharedIdentity: configError instanceof api.RetailIdConfigError && configError instanceof api.RetailIdError,
+    }));
+  `;
+  const verifyApi = (output) => {
+    const result = JSON.parse(output);
+    sameList(result.api, API_EXPORTS, 'api exports');
+    sameList(result.node, NODE_EXPORTS, 'node exports');
+    if (result.eaches[0] !== 'https://1a4.com/ABC') throw new Error('client call through stub fetch failed');
+    if (!result.sharedIdentity) throw new Error('./node errors are not instances of ./api classes');
+    return `${result.api.length} api + ${result.node.length} node exports; client call ok; shared class identity`;
+  };
+  check('runtime: ESM import ./api + ./node', () =>
+    verifyApi(node(['--input-type=module', '-e',
+      `import * as api from '@metrc/retailid/api'; import * as nodeEntry from '@metrc/retailid/node';${apiProbe}`], consumer)),
+  );
+  check('runtime: CJS require ./api + ./node', () =>
+    verifyApi(node(['-e',
+      `const api = require('@metrc/retailid/api'); const nodeEntry = require('@metrc/retailid/node');(async () => {${apiProbe}})().catch((e) => { console.error(e); process.exit(1); });`], consumer)),
+  );
+
   // 4. Type resolution. Every public export is imported and used in a typed position.
   const source = `import {
   ObjectId, RetailIdPair, VarInt, decodeBase36, decodeUrl64,
@@ -162,6 +219,37 @@ const bytes: Uint8Array = decodeBase36(encodeBase36(v.data()));
 const valid: boolean = testBase36('ABC');
 const roundTrip: string = encodeUrl64(decodeUrl64('q83v'));
 export const used = [bytes, valid, roundTrip, pair.encode({ base64: true })];
+
+import {
+  RetailIdClient, RetailIdConfig, RetailIdError, RetailIdApiError, RateLimitError, shortCodeFromUrl,
+  SALES_ENDPOINTS, MAX_RECORDS_PER_REQUEST,
+} from '@metrc/retailid/api';
+import type { PackageInfo, ReceiveResult, RetailIdClientOptions, SalesEndpoint, JsonValue } from '@metrc/retailid/api';
+import { loadConfig, createClientFromConfigFile } from '@metrc/retailid/node';
+
+const options: RetailIdClientOptions = { vendorApiKey: 'v', userApiKey: 'u', stateCode: 'md', timeoutMs: 5000 };
+const client: RetailIdClient = new RetailIdClient(options);
+const endpoint: SalesEndpoint = 'deliveries_retailer';
+const limit: number = MAX_RECORDS_PER_REQUEST;
+const path: string = SALES_ENDPOINTS[endpoint];
+const code: string = shortCodeFromUrl('https://1a4.com/ABC');
+export async function useApi(signal: AbortSignal): Promise<void> {
+  const infos: PackageInfo[] = await client.getPackagesInfo('837-XYZ', ['1A4'], { signal });
+  const received: ReceiveResult = await client.receive('837-XYZ', '1A4');
+  const urls: readonly string[] | null = received.eaches;
+  const qrCount: number | null = infos[0]?.qrCount ?? null;
+  const raw: JsonValue = await client.merge('837-XYZ', 'A', 'B');
+  const config: RetailIdConfig = await loadConfig('config.json');
+  const fromFile: RetailIdClient = await createClientFromConfigFile(undefined, { maxRetries: 0 });
+  try {
+    await client.generate('837-XYZ', '1A4', 1);
+  } catch (error) {
+    if (error instanceof RateLimitError) { const ms: number | null = error.retryAfterMs; void ms; }
+    else if (error instanceof RetailIdApiError) { const status: number = error.statusCode; void status; }
+    else if (error instanceof RetailIdError) { void error.message; }
+  }
+  void [urls, qrCount, raw, config, fromFile, limit, path, code];
+}
 `;
   const modes = [
     { name: 'node16 ESM (.mts)', file: 'esm.mts', args: ['--module', 'node16', '--moduleResolution', 'node16'] },
