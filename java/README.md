@@ -193,6 +193,146 @@ Options for encoding RetailID URLs.
 - `static String bytesToUrlBase64(byte[] bytes)` - Encode bytes to URL Base64
 - `static byte[] urlBase64ToBytes(String urlBase64)` - Decode URL Base64 to bytes
 
+## Retail ID API Client
+
+`com.retailid.api.RetailIdClient` calls the Metrc Retail ID endpoints (generate, info, receive,
+associate, merge, sales, catalog) using the JDK's `java.net.http.HttpClient` — no extra
+dependencies. Requests use HTTP Basic auth: the vendor API key is the username and the user API
+key is the password. Keep both keys on your server; the client never logs them.
+
+### Configuration (`config.json`)
+
+Put the API keys in a `config.json` instead of in source code. Start from the template:
+
+```bash
+cp config.example.json config.json
+```
+
+```json
+{
+    "vendor_api_key": "YOUR_VENDOR_API_KEY",
+    "user_api_key": "YOUR_USER_API_KEY",
+    "state_code": "md",
+    "base_url": null,
+    "timeout": 30,
+    "max_retries": 3,
+    "backoff_base": 1.0
+}
+```
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `vendor_api_key` | yes | Vendor (software) API key |
+| `user_api_key` | yes | API key of the Metrc user making requests |
+| `state_code` | one of | Market code, e.g. `"md"` → `https://api-md.metrc.com` |
+| `base_url` | one of | Full base URL; overrides `state_code` (use for the Sandbox) |
+| `timeout` | no | Per-request timeout in seconds (default 30) |
+| `max_retries` | no | Retries for retryable responses (default 3) |
+| `backoff_base` | no | Base backoff delay in seconds (default 1.0) |
+
+`config.json` is listed in `.gitignore`; never commit real keys. `RetailIdClient.fromConfig()`
+reads the file named by the `RETAILID_CONFIG` environment variable, else `./config.json`.
+A missing or incomplete file throws `RetailIdConfigException`.
+
+```java
+import com.retailid.api.*;
+
+RetailIdClient client = RetailIdClient.fromConfig();                    // $RETAILID_CONFIG or ./config.json
+RetailIdClient client = RetailIdClient.fromConfig(Paths.get("/etc/metrc/config.json"));
+RetailIdClient client = RetailIdClient.builder(RetailIdConfig.load())   // builder settings override the file
+    .timeout(Duration.ofSeconds(10))
+    .build();
+
+// Keys can still be passed directly, e.g. from a secrets manager:
+RetailIdClient client = RetailIdClient.builder(vendorKey, userKey).stateCode("md").build();
+```
+
+Use `.transport(new JdkHttpTransport(myHttpClient))` to supply your own `HttpClient` (proxies,
+custom SSL context), or implement `HttpTransport` yourself. The client closes only transports it
+created; use try-with-resources or call `close()`:
+
+```java
+try (RetailIdClient client = RetailIdClient.fromConfig()) {
+    client.getFacilities();
+}
+```
+
+### Usage
+
+```java
+import com.retailid.api.*;
+
+RetailIdClient client = RetailIdClient.fromConfig();
+
+String licenseNumber = "837-XYZ";
+String label = "1A4060300007777000000001";
+
+// Label printing
+client.getAllotment(licenseNumber);                       // New York only
+GenerateResult issuance = client.generate(licenseNumber, label, 3);
+Optional<PackageInfo> info = client.getPackageInfo(licenseNumber, label);  // qrCount, issuances, ...
+ReceiveResult received = client.receive(licenseNumber, label);
+for (String url : received.getEaches()) {
+    // print one label per URL, exactly as returned
+}
+
+// Receiving
+ReceiveResult result = client.receiveByQr(licenseNumber, "https://1a4.com/ZScU6dsbUk98nsJEAA");
+if (result.requiresVerification()) {
+    client.associate(licenseNumber, List.of(new Association(label, scannedQrUrls)));
+    result = client.receive(licenseNumber, label);  // repeat until requiresVerification() is false
+}
+
+// Package Merge: target first, source second
+client.merge(licenseNumber, targetPackageLabel, sourcePackageLabel);
+
+// Sales: build the full record from the market's Sales docs, add QrCodes per transaction
+client.postSalesReceipts(licenseNumber, List.of(receipt));               // receipt is a Map<String, Object>
+client.postSales(licenseNumber, List.of(delivery), "deliveries_retailer");
+
+// Catalog
+Iterator<Object> products = client.iterGlobalProducts(77);  // pages are fetched as you iterate
+client.getGlobalProduct(5);
+```
+
+JSON values are plain Java types: objects are `Map<String, Object>`, arrays are `List<Object>`,
+numbers are `Long` (or `Double`). Response models (`ReceiveResult`, `PackageInfo`, ...) keep the
+full response in `getRaw()`.
+
+| Method | Endpoint |
+|--------|----------|
+| `getFacilities()` | `GET /facilities/v2/` |
+| `getAllotment(license)` | `GET /retailid/v2/allotment` |
+| `generate(license, label, quantity)` | `POST /retailid/v2/generate` |
+| `getPackagesInfo(license, labels)` / `getPackageInfo` | `POST /retailid/v2/packages/info` |
+| `receive(license, label)` | `GET /retailid/v2/receive/{label}` |
+| `receiveByQr(license, qrUrlOrCode)` | `GET /retailid/v2/receive/qr/{shortCode}` |
+| `associate(license, associations)` / `associatePackage` | `POST /retailid/v2/associate` |
+| `merge(license, target, source)` | `POST /retailid/v2/merge` |
+| `postSales(license, records, endpoint)` / `postSalesReceipts` | `POST /sales/v2/receipts`, `/deliveries`, `/deliveries/retailer`, `/deliveries/retailer/sale` |
+| `getAvailableTags(license)` | `GET /tags/v2/package/available` |
+| `getPackage(license, idOrLabel)` | `GET /packages/v2/{id}` |
+| `iterGlobalProducts(brandId)` / `getGlobalProducts` | `GET /globalproducts/v2?brandId=` (all pages) |
+| `getGlobalProduct(id)` | `GET /globalproducts/v2/{id}` |
+
+### Errors, retries, and limits
+
+- Non-2xx responses throw an unchecked `RetailIdApiException` subclass: `BadRequestException`
+  (400), `AuthenticationException` (401), `PermissionDeniedException` (403), `NotFoundException`
+  (404), `ConflictException` (409), `UnprocessableException` (422), `RateLimitException` (429,
+  with `getRetryAfter()`), `ServerException` (5xx). Each carries `getStatusCode()`,
+  `getApiMessage()`, `getMethod()`, `getPath()`, and the decoded `getBody()`.
+  `RetailIdApiException.forStatus()` builds the matching error from a status and payload.
+- 429 is retried after the `Retry-After` delay (or an increasing backoff). Timeouts and 5xx are
+  retried only for reads (GET and `packages/info`).
+- Calls that change data (`generate`, `associate`, `merge`, sales) are never retried
+  automatically. A timeout throws `RetailIdTimeoutException`: check the current state with
+  `getPackagesInfo` or `receive` before sending again. Other network failures throw
+  `UncheckedIOException`.
+- List requests are capped at 10 records. `getPackagesInfo` splits larger lists for you;
+  `associate` and `postSales` throw `IllegalArgumentException` instead, so you control each change.
+- Requests are logged through `java.util.logging` under `com.retailid.api` (keys are never logged).
+
 ## Test Vectors
 
 The SDK passes all test vectors from the JavaScript SDK:
@@ -227,7 +367,7 @@ mvn install
 
 ## Features
 
-- **Zero external dependencies** - Uses only Java standard library
+- **Zero external dependencies** - Uses only the Java standard library, including the Retail ID API client
 - **Feature parity** with JavaScript SDK
 - **Comprehensive tests** - Full JUnit 5 test suite
 - **Javadoc documentation** - Complete API documentation

@@ -1,3 +1,6 @@
+# Retail ID API credentials (copy config.example.json)
+config.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

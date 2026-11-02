@@ -1,0 +1,3 @@
+# Runtime dependencies for the retailid package.
+# Development tools: pip install -e ".[dev]"
+requests>=2.31,<3
