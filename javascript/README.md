@@ -33,13 +33,13 @@ import { ObjectId, RetailIdPair, getShortUrl } from '@metrc/retailid';
 
 // Encode a batch ID and index to a short URL
 const batchId = new ObjectId('ABCDEF012345670000027190');
-const url = getShortUrl(batchId, 485, {domain: "d.1a4.com"});
+const url = getShortUrl(batchId, 1, {domain: "d.1a4.com"});
 // => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 
 // Decode a short URL back to its components
 const pair = new RetailIdPair('HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL');
-console.log(pair.batchId.toHexString()); // "ABCDEF012345670000027190"
-console.log(pair.index);                  // 485
+console.log(pair.batchId.toHexString()); // "abcdef012345670000027190"
+console.log(pair.index);                  // 1
 ```
 
 ---
@@ -51,17 +51,17 @@ Parse a scanned QR code URL to extract the tag (batch ID) and index:
 ```javascript
 const pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
 
-console.log(pair.batchId.toHexString());  // "ABCDEF012345670000027190"
+console.log(pair.batchId.toHexString());  // "abcdef012345670000027190"
 console.log(pair.index);                   // 1
 ```
 
 Both URL formats are supported:
 - **Base36 (current):** `HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL`
-- **Base64 (legacy):** `https://d.1a4.com/q83vASNFZwAAAnGQ5QM`
+- **Base64 (legacy):** `https://d.1a4.com/q83vASNFZwAAAnGQAQ`
 
-The SDK auto-detects the format based on URL case:
-- Uppercase `HTTPS://` → Base36 decoding
-- Lowercase `https://` → Base64 decoding
+Both examples encode the same label (tag `abcdef012345670000027190`, index 1).
+
+The SDK detects the encoding from the short code itself, not from the case of the URL. It tries Base36 and URL-safe Base64, preferring a result whose batch ID has a known RetailID prefix. A mixed-case short code can only be Base64. A bare short code (without the domain) is also accepted.
 
 ---
 
@@ -79,11 +79,11 @@ const url = getShortUrl(new ObjectId(tag), index, {domain: 'd.1a4.com'});
 
 // Base64
 const legacyUrl = getShortUrl(new ObjectId(tag), index, { base64: true, domain: 'd.1a4.com' });
-// "https://d.1a4.com/q83vASNFZwAAAnGQ5QM"
+// "https://d.1a4.com/q83vASNFZwAAAnGQAQ"
 
 // Custom domain
 const customUrl = getShortUrl(new ObjectId(tag), index, { domain: 'example.com' });
-// "HTTPS://EXAMPLE.COM/5LN8CBN1UB33DON9CHKX"
+// "HTTPS://EXAMPLE.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
 ---
@@ -96,14 +96,14 @@ const scannedUrl = "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL";
 
 // 2. Decode to get tag and index
 const pair = new RetailIdPair(scannedUrl);
-const tag = pair.batchId.toHexString();  // "ABCDEF012345670000027190"
-const index = pair.index;                 // 485
+const tag = pair.batchId.toHexString();  // "abcdef012345670000027190"
+const index = pair.index;                 // 1
 
 // 3. Use tag and index in your application
 console.log(`Tag: ${tag}, Index: ${index}`);
 
-// 4. Re-encode if needed
-const newUrl = pair.encode();
+// 4. Re-encode if needed (the domain defaults to 1a4.com; pass it to keep the original)
+const newUrl = pair.encode({ domain: 'd.1a4.com' });
 console.log(newUrl);  // "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
 ```
 
@@ -127,7 +127,7 @@ const oid = new ObjectId();
 
 // Properties and methods
 oid.id;              // Uint8Array (12 bytes)
-oid.toHexString();   // "ABCDEF012345670000027190"
+oid.toHexString();   // "abcdef012345670000027190" (always lowercase)
 oid.equals(other);   // boolean
 ```
 
@@ -144,11 +144,11 @@ const v = new VarInt(bytes);
 
 // Static methods
 VarInt.encode(128);              // Uint8Array
-VarInt.decode(bytes, offset);    // { value: number, length: number }
+VarInt.decode(bytes);            // { value: number, length: number, bytes: Uint8Array }
 
 // Instance methods
 v.toHexString();   // hex representation
-v.toString();      // decimal string
+v.toString();      // hex string, e.g. "0x80"
 v.length();        // byte length
 v.data();          // Uint8Array
 ```
@@ -162,7 +162,7 @@ Decoded RetailID representation.
 | `new RetailIdPair(url)` | Decode a QR URL into tag + index |
 | `pair.batchId` | ObjectId - the batch identifier |
 | `pair.index` | number - the index within the batch |
-| `pair.encode()` | Re-encode to Base36 URL (default) |
+| `pair.encode()` | Re-encode to Base36 URL on the default domain (`1a4.com`) |
 | `pair.encode({ base64: true })` | Re-encode to Base64 URL (legacy) |
 | `pair.encode({ domain: 'example.com' })` | Re-encode with custom domain |
 
@@ -193,7 +193,8 @@ Decoded RetailID representation.
 | ESM | `dist/retailid.esm.js` | Modern bundlers, Node.js ESM |
 | CommonJS | `dist/retailid.cjs` | Node.js require() |
 | Browser | `dist/retailid.min.js` | Script tag (IIFE) |
-| Types | `dist/index.d.ts` | TypeScript definitions |
+| Types (ESM) | `dist/index.d.ts` | TypeScript definitions for `import` |
+| Types (CJS) | `dist/index.d.cts` | TypeScript definitions for `require()` |
 
 ---
 
@@ -211,16 +212,27 @@ Decoded RetailID representation.
 ## Development
 
 ```bash
-# Install dependencies
-npm install
+# Install the exact dependency versions from package-lock.json
+npm ci
 
-# Run tests
+# Type-check sources and tests (strict)
+npm run typecheck
+
+# Build all bundles and type declarations
+npm run build
+
+# Run tests (builds first; the browser test runs against dist/retailid.min.js)
 npm test
 
-# Build
-npm run build
+# Verify the packed package: contents, ESM/CJS exports, and TypeScript resolution
+npm run verify:package
+
+# Verify QR bundles are byte-identical to a baseline ref (default: upstream/main)
+npm run verify:qr-bundle
 ```
+
+The toolchain (including TypeScript) is pinned in `package-lock.json`. Use `npm ci` so builds are reproducible.
 
 ## License
 
-ISC
+MIT
