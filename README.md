@@ -19,15 +19,15 @@ Use these SDKs to encode and decode RetailID labels in your applications.
 ### Encoding
 
 Create a short URL from a batch ID and index:
-- default domain in the SDK is 1A4.COM - we're using a demo domain for our examples so we pass in a custom domain
+- the default domain in the SDK is 1A4.COM; pass a `domain` option to use a custom domain
 
 **JavaScript**
 ```javascript
 import { getShortUrl, ObjectId } from '@metrc/retailid';
 
 const batchId = new ObjectId('ABCDEF012345670000027190');
-const url = getShortUrl(batchId, 485, {domain: "d.1a4.com"});
-// => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
+const url = getShortUrl(batchId, 485);
+// => "HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 ```
 
 **Python**
@@ -35,8 +35,8 @@ const url = getShortUrl(batchId, 485, {domain: "d.1a4.com"});
 from retailid import ObjectId, get_short_url
 
 batch_id = ObjectId('abcdef012345670000027190')
-url = get_short_url(batch_id, 485, domain="d.1a4.com")
-# => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
+url = get_short_url(batch_id, 485)
+# => "HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 ```
 
 **Java**
@@ -44,10 +44,9 @@ url = get_short_url(batch_id, 485, domain="d.1a4.com")
 import com.retailid.ObjectId;
 import com.retailid.RetailId;
 
-EncodeOptions customDomain = new EncodeOptions().setDomain("d.1a4.com");
 ObjectId batchId = new ObjectId("abcdef012345670000027190");
-String url = RetailId.encode(batchId, 485, customDomain);
-// => "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
+String url = RetailId.encode(batchId, 485);
+// => "HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 ```
 
 ### Decoding
@@ -58,7 +57,7 @@ Parse a short URL back to its components:
 ```javascript
 import { RetailIdPair } from '@metrc/retailid';
 
-const pair = new RetailIdPair('HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL');
+const pair = new RetailIdPair('HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR');
 console.log(pair.batchId.toHexString()); // "abcdef012345670000027190"
 console.log(pair.index);                  // 485
 ```
@@ -67,7 +66,7 @@ console.log(pair.index);                  // 485
 ```python
 from retailid import RetailIdPair
 
-pair = RetailIdPair('HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL')
+pair = RetailIdPair('HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR')
 print(pair.batch_id.to_hex_string())  # "ABCDEF012345670000027190"
 print(pair.index)                      # 485
 ```
@@ -76,7 +75,7 @@ print(pair.index)                      # 485
 ```java
 import com.retailid.RetailIdPair;
 
-RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+RetailIdPair pair = new RetailIdPair("HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR");
 System.out.println(pair.getBatchId().toHexString()); // "ABCDEF012345670000027190"
 System.out.println(pair.getIndex());                  // 485
 ```

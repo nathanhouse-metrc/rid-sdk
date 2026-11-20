@@ -253,10 +253,11 @@ For compatibility with the original `rid.py`, the `RetailId` class with static m
 from retailid import RetailId
 
 # Encode
-url = RetailId.encode("abcdef012345670000027190", 485, use_base64=False, domain="d.1a4.com")
+url = RetailId.encode("abcdef012345670000027190", 485, use_base64=False)
+print(url)         # HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR
 
 # Decode
-pair = RetailId.decode("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL")
+pair = RetailId.decode("HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR")
 print(pair.tag)    # abcdef012345670000027190
 print(pair.index)  # 485
 ```
