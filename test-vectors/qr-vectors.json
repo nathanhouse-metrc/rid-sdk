@@ -1,0 +1,522 @@
+{
+  "schemaVersion": 1,
+  "canonicalImplementation": "javascript",
+  "generator": "javascript/scripts/generate-qr-vectors.mjs",
+  "defaultDomain": "1a4.com",
+  "conventions": {
+    "batchId": "24 lowercase hexadecimal characters. Compare case-insensitively: some SDKs render uppercase.",
+    "index": "Non-negative integer below 2^31 (2147483648).",
+    "payload": "The 12 batch ID bytes followed by the index as an unsigned LEB128 varint.",
+    "base36Code": "The payload as a big-endian integer in uppercase Base36.",
+    "base64Code": "The payload as URL-safe Base64 ('+' becomes '-', '/' becomes '_') without '=' padding.",
+    "urls": "Base36: HTTPS://<defaultDomain uppercased>/<base36Code>. Base64: https://<defaultDomain>/<base64Code>. The host never affects decoding, and a bare short code is also accepted.",
+    "labels": "Each label must encode to exactly its base36Code and base64Code, and each form must decode to its batchId and index in both default and strict mode.",
+    "strictRejections": "These labels must be rejected in strict mode (no known prefix and an invalid ObjectId timestamp). Default-mode behavior for them is intentionally not specified.",
+    "customDomain": "Encoding with the given domain must produce exactly these URLs, and each must decode to the referenced label.",
+    "invalidInputs": "Must be rejected in default and strict mode. Only the rejection is specified, not the error type or message.",
+    "intentionallyExcluded": [
+      "indexes at or above 2^31",
+      "lowercase Base36 short codes",
+      "default-mode decoding of batches with an invalid ObjectId timestamp",
+      "ObjectId timestamps after 2038-01-19",
+      "negative, fractional or NaN indexes"
+    ]
+  },
+  "batches": [
+    {
+      "id": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "category": "known-prefix",
+      "description": "Known RetailID prefix 'abc'."
+    },
+    {
+      "id": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "category": "known-prefix",
+      "description": "Known RetailID prefix '1a4'."
+    },
+    {
+      "id": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "category": "known-prefix",
+      "description": "Second batch with the known RetailID prefix '1a4'."
+    },
+    {
+      "id": "validTimestampNoPrefix",
+      "batchId": "507f1f77bcf86cd799439011",
+      "category": "valid-timestamp-no-prefix",
+      "description": "No RetailID prefix, but a valid ObjectId timestamp (2012-10-17)."
+    },
+    {
+      "id": "invalidTimestampNoPrefix",
+      "batchId": "ffffffffffffffffffffffff",
+      "category": "invalid-timestamp-no-prefix",
+      "description": "No RetailID prefix and an invalid ObjectId timestamp. Used only for strict-mode rejection."
+    }
+  ],
+  "labels": [
+    {
+      "id": "knownPrefixAbc-0",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 0,
+      "varintBytes": 1,
+      "base36Code": "10NOIEYKAJDG6CF0EXGJK",
+      "base64Code": "q83vASNFZwAAAnGQAA",
+      "tags": [
+        "index-zero"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-1",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 1,
+      "varintBytes": 1,
+      "base36Code": "10NOIEYKAJDG6CF0EXGJL",
+      "base64Code": "q83vASNFZwAAAnGQAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-127",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 127,
+      "varintBytes": 1,
+      "base36Code": "10NOIEYKAJDG6CF0EXGN3",
+      "base64Code": "q83vASNFZwAAAnGQfw",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-128",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 128,
+      "varintBytes": 2,
+      "base36Code": "78OEAYDSAXRN14AQY5YCCH",
+      "base64Code": "q83vASNFZwAAAnGQgAE",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-248",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 248,
+      "varintBytes": 2,
+      "base36Code": "78OEAYDSAXRN14AQY5Z01T",
+      "base64Code": "q83vASNFZwAAAnGQ-AE",
+      "tags": [
+        "base64-hyphen"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-249",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 249,
+      "varintBytes": 2,
+      "base36Code": "78OEAYDSAXRN14AQY5Z08X",
+      "base64Code": "q83vASNFZwAAAnGQ-QE",
+      "tags": [
+        "base64-hyphen"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-16383",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 16383,
+      "varintBytes": 2,
+      "base36Code": "78OEAYDSAXRN14AQY5Z1J3",
+      "base64Code": "q83vASNFZwAAAnGQ_38",
+      "tags": [
+        "varint-boundary",
+        "base64-underscore"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-16384",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 16384,
+      "varintBytes": 3,
+      "base36Code": "1FHPHPWI19S4JRYKFMYC8HS1",
+      "base64Code": "q83vASNFZwAAAnGQgIAB",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-2097151",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 2097151,
+      "varintBytes": 3,
+      "base36Code": "1FHPHPWI19S4JRYKFMYH7L33",
+      "base64Code": "q83vASNFZwAAAnGQ__9_",
+      "tags": [
+        "varint-boundary",
+        "base64-underscore"
+      ]
+    },
+    {
+      "id": "knownPrefixAbc-2097152",
+      "batch": "knownPrefixAbc",
+      "batchId": "abcdef012345670000027190",
+      "index": 2097152,
+      "varintBytes": 4,
+      "base36Code": "A65XA07491K0CMTTB7870F4E9",
+      "base64Code": "q83vASNFZwAAAnGQgICAAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-0",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 0,
+      "varintBytes": 1,
+      "base36Code": "5LN8CBN1UB33DON9CHKW",
+      "base64Code": "GkBgMAAgCBAAAGYJAA",
+      "tags": [
+        "index-zero"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-1",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 1,
+      "varintBytes": 1,
+      "base36Code": "5LN8CBN1UB33DON9CHKX",
+      "base64Code": "GkBgMAAgCBAAAGYJAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-127",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 127,
+      "varintBytes": 1,
+      "base36Code": "5LN8CBN1UB33DON9CHOF",
+      "base64Code": "GkBgMAAgCBAAAGYJfw",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-128",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 128,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRX3IU01B9EGTPTT",
+      "base64Code": "GkBgMAAgCBAAAGYJgAE",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-248",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 248,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRX3IU01B9EGUDJ5",
+      "base64Code": "GkBgMAAgCBAAAGYJ-AE",
+      "tags": [
+        "base64-hyphen"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-249",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 249,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRX3IU01B9EGUDQ9",
+      "base64Code": "GkBgMAAgCBAAAGYJ-QE",
+      "tags": [
+        "base64-hyphen"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-16383",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 16383,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRX3IU01B9EGUF0F",
+      "base64Code": "GkBgMAAgCBAAAGYJ_38",
+      "tags": [
+        "varint-boundary",
+        "base64-underscore"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-16384",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 16384,
+      "varintBytes": 3,
+      "base36Code": "7V8S42PYJD1XC9C2UVNCD1D",
+      "base64Code": "GkBgMAAgCBAAAGYJgIAB",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-2097151",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 2097151,
+      "varintBytes": 3,
+      "base36Code": "7V8S42PYJD1XC9C2UVSBGCF",
+      "base64Code": "GkBgMAAgCBAAAGYJ__9_",
+      "tags": [
+        "varint-boundary",
+        "base64-underscore"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4-2097152",
+      "batch": "knownPrefix1a4",
+      "batchId": "1a4060300020081000006609",
+      "index": 2097152,
+      "varintBytes": 4,
+      "base36Code": "1JY6FWZCLLOTP36DWBL1ZXERL",
+      "base64Code": "GkBgMAAgCBAAAGYJgICAAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-0",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 0,
+      "varintBytes": 1,
+      "base36Code": "5LN8CBN1F0QEADZAUAKG",
+      "base64Code": "GkBgMAAEG2AAAJKXAA",
+      "tags": [
+        "index-zero"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-1",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 1,
+      "varintBytes": 1,
+      "base36Code": "5LN8CBN1F0QEADZAUAKH",
+      "base64Code": "GkBgMAAEG2AAAJKXAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-127",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 127,
+      "varintBytes": 1,
+      "base36Code": "5LN8CBN1F0QEADZAUANZ",
+      "base64Code": "GkBgMAAEG2AAAJKXfw",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-128",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 128,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRU2T7PLVF13FUO1",
+      "base64Code": "GkBgMAAEG2AAAJKXgAE",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-248",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 248,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRU2T7PLVF13GIDD",
+      "base64Code": "GkBgMAAEG2AAAJKX-AE",
+      "tags": [
+        "base64-hyphen"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-249",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 249,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRU2T7PLVF13GIKH",
+      "base64Code": "GkBgMAAEG2AAAJKX-QE",
+      "tags": [
+        "base64-hyphen"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-16383",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 16383,
+      "varintBytes": 2,
+      "base36Code": "13TX7BMRU2T7PLVF13GJUN",
+      "base64Code": "GkBgMAAEG2AAAJKX_38",
+      "tags": [
+        "varint-boundary",
+        "base64-underscore"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-16384",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 16384,
+      "varintBytes": 3,
+      "base36Code": "7V8S42PXXVZQU3JEVSGQRY9",
+      "base64Code": "GkBgMAAEG2AAAJKXgIAB",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-2097151",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 2097151,
+      "varintBytes": 3,
+      "base36Code": "7V8S42PXXVZQU3JEVSLPV9B",
+      "base64Code": "GkBgMAAEG2AAAJKX__9_",
+      "tags": [
+        "varint-boundary",
+        "base64-underscore"
+      ]
+    },
+    {
+      "id": "knownPrefix1a4Alt-2097152",
+      "batch": "knownPrefix1a4Alt",
+      "batchId": "1a40603000041b6000009297",
+      "index": 2097152,
+      "varintBytes": 4,
+      "base36Code": "1JY6FWZCHCZI6U161U2F2FGN5",
+      "base64Code": "GkBgMAAEG2AAAJKXgICAAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "validTimestampNoPrefix-1",
+      "batch": "validTimestampNoPrefix",
+      "batchId": "507f1f77bcf86cd799439011",
+      "index": 1,
+      "varintBytes": 1,
+      "base36Code": "H6BG9PEO99FH0S8ZWK5D",
+      "base64Code": "UH8fd7z4bNeZQ5ARAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "validTimestampNoPrefix-128",
+      "batch": "validTimestampNoPrefix",
+      "batchId": "507f1f77bcf86cd799439011",
+      "index": 128,
+      "varintBytes": 2,
+      "base36Code": "3E4XFP0OCHV211KVZBJZ7L",
+      "base64Code": "UH8fd7z4bNeZQ5ARgAE",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "validTimestampNoPrefix-16384",
+      "batch": "validTimestampNoPrefix",
+      "batchId": "507f1f77bcf86cd799439011",
+      "index": 16384,
+      "varintBytes": 3,
+      "base36Code": "O4J1RLWT4V0UFF8JF66330H",
+      "base64Code": "UH8fd7z4bNeZQ5ARgIAB",
+      "tags": [
+        "varint-boundary"
+      ]
+    },
+    {
+      "id": "validTimestampNoPrefix-2097152",
+      "batch": "validTimestampNoPrefix",
+      "batchId": "507f1f77bcf86cd799439011",
+      "index": 2097152,
+      "varintBytes": 4,
+      "base36Code": "4RK7GKBTB6KM0DOCQ3VV9Y4G1",
+      "base64Code": "UH8fd7z4bNeZQ5ARgICAAQ",
+      "tags": [
+        "varint-boundary"
+      ]
+    }
+  ],
+  "strictRejections": [
+    {
+      "id": "invalidTimestampNoPrefix-1",
+      "batch": "invalidTimestampNoPrefix",
+      "batchId": "ffffffffffffffffffffffff",
+      "index": 1,
+      "base36Code": "1IMEU2DGGAAXHSNBHYV41",
+      "base64Code": "________________AQ"
+    },
+    {
+      "id": "invalidTimestampNoPrefix-16383",
+      "batch": "invalidTimestampNoPrefix",
+      "batchId": "ffffffffffffffffffffffff",
+      "index": 16383,
+      "base36Code": "ASFDHSVOZT9Q6JPTRRYMWV",
+      "base64Code": "_________________38"
+    }
+  ],
+  "customDomain": [
+    {
+      "id": "knownPrefixAbc-16383@example.com",
+      "label": "knownPrefixAbc-16383",
+      "domain": "example.com",
+      "base36Url": "HTTPS://EXAMPLE.COM/78OEAYDSAXRN14AQY5Z1J3",
+      "base64Url": "https://example.com/q83vASNFZwAAAnGQ_38"
+    }
+  ],
+  "invalidInputs": [
+    {
+      "id": "invalid-1",
+      "input": "invalid_garbage"
+    },
+    {
+      "id": "invalid-2",
+      "input": "invalid-garbage"
+    },
+    {
+      "id": "invalid-3",
+      "input": "not a url at all"
+    },
+    {
+      "id": "invalid-4",
+      "input": "https://1a4.com/!!!"
+    },
+    {
+      "id": "invalid-5",
+      "input": "ZZZZ"
+    }
+  ]
+}
