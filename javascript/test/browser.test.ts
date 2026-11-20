@@ -196,6 +196,117 @@ describe('RetailId Browser Bundle', () => {
     });
   });
 
+  // Golden vectors at the varint byte-length boundaries (1 -> 2 -> 3 -> 4 bytes).
+  // Generated with the SDK's own encoder (getShortUrl) for batch
+  // abcdef012345670000027190 on the default domain 1a4.com, and cross-checked against an independent
+  // big-endian Base36 / URL-safe Base64 calculation. The Base64 codes for 248, 249,
+  // 16383 and 2097151 contain '-' or '_' (URL-safe Base64's replacements for '+' and '/').
+  const boundaryVectors = [
+    { index: 1, bytes: 1, base36: 'HTTPS://1A4.COM/10NOIEYKAJDG6CF0EXGJL', base64: 'https://1a4.com/q83vASNFZwAAAnGQAQ' },
+    { index: 127, bytes: 1, base36: 'HTTPS://1A4.COM/10NOIEYKAJDG6CF0EXGN3', base64: 'https://1a4.com/q83vASNFZwAAAnGQfw' },
+    { index: 128, bytes: 2, base36: 'HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YCCH', base64: 'https://1a4.com/q83vASNFZwAAAnGQgAE' },
+    { index: 248, bytes: 2, base36: 'HTTPS://1A4.COM/78OEAYDSAXRN14AQY5Z01T', base64: 'https://1a4.com/q83vASNFZwAAAnGQ-AE' },
+    { index: 249, bytes: 2, base36: 'HTTPS://1A4.COM/78OEAYDSAXRN14AQY5Z08X', base64: 'https://1a4.com/q83vASNFZwAAAnGQ-QE' },
+    { index: 16383, bytes: 2, base36: 'HTTPS://1A4.COM/78OEAYDSAXRN14AQY5Z1J3', base64: 'https://1a4.com/q83vASNFZwAAAnGQ_38' },
+    { index: 16384, bytes: 3, base36: 'HTTPS://1A4.COM/1FHPHPWI19S4JRYKFMYC8HS1', base64: 'https://1a4.com/q83vASNFZwAAAnGQgIAB' },
+    { index: 2097151, bytes: 3, base36: 'HTTPS://1A4.COM/1FHPHPWI19S4JRYKFMYH7L33', base64: 'https://1a4.com/q83vASNFZwAAAnGQ__9_' },
+    { index: 2097152, bytes: 4, base36: 'HTTPS://1A4.COM/A65XA07491K0CMTTB7870F4E9', base64: 'https://1a4.com/q83vASNFZwAAAnGQgICAAQ' },
+  ];
+
+  describe('Varint boundary golden vectors', () => {
+    const batch = 'abcdef012345670000027190';
+
+    boundaryVectors.forEach(({ index, bytes, base36, base64 }) => {
+      it(`should decode Base36 index ${index} (${bytes}-byte varint)`, () => {
+        const pair = new RetailId.RetailIdPair(base36);
+        expect(pair.batchId.toHexString()).toBe(batch);
+        expect(pair.index).toBe(index);
+      });
+
+      it(`should decode Base64 index ${index} (${bytes}-byte varint)`, () => {
+        const pair = new RetailId.RetailIdPair(base64);
+        expect(pair.batchId.toHexString()).toBe(batch);
+        expect(pair.index).toBe(index);
+      });
+
+      it(`should encode index ${index} to the exact Base36 and Base64 URLs`, () => {
+        const batchId = new RetailId.ObjectId(batch);
+        expect(RetailId.getShortUrl(batchId, index)).toBe(base36);
+        expect(RetailId.getShortUrl(batchId, index, { base64: true })).toBe(base64);
+      });
+    });
+  });
+
+  describe('URL-safe Base64 codes containing "_" and "-"', () => {
+    // Known-prefix batch (1a4...), decoded in strict mode, as production labels are.
+    const prefixBatch = '1a4060300020081000006609';
+    const cases = [
+      { index: 248, url: 'https://1a4.com/GkBgMAAgCBAAAGYJ-AE', char: '-' },
+      { index: 249, url: 'https://1a4.com/GkBgMAAgCBAAAGYJ-QE', char: '-' },
+      { index: 16383, url: 'https://1a4.com/GkBgMAAgCBAAAGYJ_38', char: '_' },
+      { index: 2097151, url: 'https://1a4.com/GkBgMAAgCBAAAGYJ__9_', char: '_' },
+    ];
+
+    cases.forEach(({ index, url, char }) => {
+      it(`should decode index ${index} ("${char}") in strict and default mode, and round-trip`, () => {
+        expect(url.split('/').pop()).toContain(char);
+        for (const strict of [true, false]) {
+          const pair = new RetailId.RetailIdPair(url, strict);
+          expect(pair.batchId.toHexString()).toBe(prefixBatch);
+          expect(pair.index).toBe(index);
+          expect(pair.encode({ base64: true })).toBe(url);
+        }
+      });
+
+      it(`should decode the bare short code for index ${index} ("${char}")`, () => {
+        const pair = new RetailId.RetailIdPair(url.split('/').pop());
+        expect(pair.batchId.toHexString()).toBe(prefixBatch);
+        expect(pair.index).toBe(index);
+      });
+    });
+  });
+
+  describe('Invalid input and strict-mode validation', () => {
+    // Batch ffffffffffffffffffffffff has no RetailID prefix and an invalid ObjectId
+    // timestamp. Its Base64 code (________________AQ) contains only '_' and URL-safe characters.
+    const noPrefixBase36 = 'HTTPS://1A4.COM/1IMEU2DGGAAXHSNBHYV41';
+    const noPrefixBase64 = 'https://1a4.com/________________AQ';
+    // Batch 507f1f77bcf86cd799439011 has no RetailID prefix but a valid timestamp.
+    const mongoBase36 = 'HTTPS://1A4.COM/H6BG9PEO99FH0S8ZWK5D';
+    const mongoBase64 = 'https://1a4.com/UH8fd7z4bNeZQ5ARAQ';
+
+    it('should reject unrecognizable input with "Unrecognized URL"', () => {
+      for (const input of ['invalid_garbage', 'invalid-garbage', 'https://1a4.com/!!!', 'not a url at all']) {
+        expect(() => new RetailId.RetailIdPair(input)).toThrow(/Unrecognized URL/);
+      }
+    });
+
+    it('should still report a URL with no short code', () => {
+      expect(() => new RetailId.RetailIdPair('https://1a4.com/')).toThrow(/no id in url/);
+    });
+
+    it('strict mode should reject an unknown prefix with an invalid timestamp (Base36 and Base64)', () => {
+      expect(() => new RetailId.RetailIdPair(noPrefixBase36, true)).toThrow(/Unrecognized URL/);
+      expect(() => new RetailId.RetailIdPair(noPrefixBase64, true)).toThrow(/Unrecognized URL/);
+    });
+
+    it('default mode should still accept an unknown prefix (Base36 and Base64)', () => {
+      for (const url of [noPrefixBase36, noPrefixBase64]) {
+        const pair = new RetailId.RetailIdPair(url);
+        expect(pair.batchId.toHexString()).toBe('ffffffffffffffffffffffff');
+        expect(pair.index).toBe(1);
+      }
+    });
+
+    it('strict mode should still accept an unknown prefix with a valid timestamp (Base36 and Base64)', () => {
+      for (const url of [mongoBase36, mongoBase64]) {
+        const pair = new RetailId.RetailIdPair(url, true);
+        expect(pair.batchId.toHexString()).toBe('507f1f77bcf86cd799439011');
+        expect(pair.index).toBe(1);
+      }
+    });
+  });
+
   describe('VarInt encoding', () => {
     it('should encode/decode small values (< 128)', () => {
       const encoded = RetailId.VarInt.encode(1);

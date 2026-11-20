@@ -310,10 +310,12 @@ const getBatchIdAndIndexFromUrl = (url: string, strict = false): ParsedId => {
   const decodeBase36Buf = (): Uint8Array => decodeBase36(shortCode);
   const decodeBase64Buf = (): Uint8Array => base64ToBytes(decodeUrl64(shortCode));
 
-  // Try with a specific encoding and mode, return null on failure
-  const tryParse = (buf: Uint8Array, mode: 'strict' | 'mongo' | 'any'): ParsedId | null => {
+  // Try with a specific encoding and mode, return null on failure. The decoder runs
+  // inside the try so a string that is not valid in this encoding (e.g. a Base64 code
+  // containing '-' or '_' is not Base36) falls through to the next attempt.
+  const tryParse = (decode: () => Uint8Array, mode: 'strict' | 'mongo' | 'any'): ParsedId | null => {
     try {
-      return getBatchIdAndIndex(buf, mode);
+      return getBatchIdAndIndex(decode(), mode);
     } catch {
       return null;
     }
@@ -322,20 +324,20 @@ const getBatchIdAndIndexFromUrl = (url: string, strict = false): ParsedId => {
   // 1. Try strict mode (known prefixes only) with both encodings
 
   // Could be base36 - try it first
-  const base36Buf = tryParse(decodeBase36Buf(), 'strict');
+  const base36Buf = tryParse(decodeBase36Buf, 'strict');
   if (base36Buf) return base36Buf;
 
   // Try base64
-  const base64Strict = tryParse(decodeBase64Buf(), 'strict');
+  const base64Strict = tryParse(decodeBase64Buf, 'strict');
   if (base64Strict) return base64Strict;
 
   // 2. If allowMongo, try mongo mode (valid timestamp) with both encodings
 
   if (shortCodeIsAllUppercase) {
-    const base36Mongo = tryParse(decodeBase36Buf(), strict ? 'mongo' : 'any');
+    const base36Mongo = tryParse(decodeBase36Buf, strict ? 'mongo' : 'any');
     if (base36Mongo) return base36Mongo;
   }
-  const base64Mongo = tryParse(decodeBase64Buf(), strict ? 'mongo' : 'any');
+  const base64Mongo = tryParse(decodeBase64Buf, strict ? 'mongo' : 'any');
   if (base64Mongo) return base64Mongo;
 
   throw new Error(`Unrecognized URL: ${url}`);
