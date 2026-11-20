@@ -7,6 +7,61 @@ import { dirname, resolve } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Canonical expected values, committed to the repository and generated from the
+// JavaScript SDK by scripts/generate-qr-vectors.mjs. Tests only read this file;
+// they never regenerate it, so an encoder regression fails a test instead of
+// silently updating the expectations.
+interface QrBatch {
+  id: string;
+  batchId: string;
+  category: string;
+}
+interface QrLabel {
+  id: string;
+  batch: string;
+  batchId: string;
+  index: number;
+  varintBytes: number;
+  base36Code: string;
+  base64Code: string;
+  tags: string[];
+}
+interface QrStrictRejection {
+  id: string;
+  batch: string;
+  batchId: string;
+  index: number;
+  base36Code: string;
+  base64Code: string;
+}
+interface QrCustomDomain {
+  id: string;
+  label: string;
+  domain: string;
+  base36Url: string;
+  base64Url: string;
+}
+interface QrInvalidInput {
+  id: string;
+  input: string;
+}
+interface QrVectors {
+  schemaVersion: number;
+  canonicalImplementation: string;
+  defaultDomain: string;
+  batches: QrBatch[];
+  labels: QrLabel[];
+  strictRejections: QrStrictRejection[];
+  customDomain: QrCustomDomain[];
+  invalidInputs: QrInvalidInput[];
+}
+
+const qrVectors: QrVectors = JSON.parse(
+  readFileSync(resolve(__dirname, '../../test-vectors/qr-vectors.json'), 'utf-8'),
+);
+const qrBase36Url = (domain: string, code: string): string => `HTTPS://${domain.toUpperCase()}/${code}`;
+const qrBase64Url = (domain: string, code: string): string => `https://${domain}/${code}`;
+
 describe('RetailId Browser Bundle', () => {
   let RetailId: any;
 
@@ -26,8 +81,10 @@ describe('RetailId Browser Bundle', () => {
   });
 
   // Vectors for batch abcdef012345670000027190. Each was derived independently
-  // (12-byte batch + LEB128 index, big-endian base36) and cross-checked against
-  // the Python SDK. They match the Test Vectors table in README.md.
+  // (12-byte batch + LEB128 index, big-endian base36). JavaScript is the
+  // canonical QR implementation; the cross-language expected outputs are the
+  // committed fixture test-vectors/qr-vectors.json. These match the Test
+  // Vectors table in README.md.
   const testCases = [
     {
       url: 'HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL',
@@ -137,8 +194,9 @@ describe('RetailId Browser Bundle', () => {
   // Production-prefix vectors: batch IDs starting with the known RetailID prefix
   // "1a4". These are the original URLs from earlier versions of this suite, now
   // asserted against their actual decoded batch IDs and indexes. Each value was
-  // derived independently (12-byte batch + LEB128 index) and cross-checked
-  // against the Python SDK. Decoding uses strict mode (known prefix required).
+  // derived independently (12-byte batch + LEB128 index); JavaScript is the
+  // canonical QR implementation, so they are not checked against another SDK.
+  // Decoding uses strict mode (known prefix required).
   describe('Production-prefix (1a4) vectors', () => {
     it('should decode Base36 index 128 and re-encode to the identical URL', () => {
       const url = 'HTTPS://1A4.COM/13TX7BMRX3IU01B9EGTPTT';
@@ -304,6 +362,115 @@ describe('RetailId Browser Bundle', () => {
         expect(pair.batchId.toHexString()).toBe('507f1f77bcf86cd799439011');
         expect(pair.index).toBe(1);
       }
+    });
+  });
+
+  describe('Canonical QR vectors (test-vectors/qr-vectors.json)', () => {
+    const { defaultDomain } = qrVectors;
+    const batchHex = (pair: any): string => pair.batchId.toHexString().toLowerCase();
+    const varintWidth = (index: number): number => (index < 128 ? 1 : index < 16384 ? 2 : index < 2097152 ? 3 : index < 268435456 ? 4 : 5);
+
+    it('should identify JavaScript as canonical and use the SDK default domain', () => {
+      expect(qrVectors.schemaVersion).toBe(1);
+      expect(qrVectors.canonicalImplementation).toBe('javascript');
+      expect(defaultDomain).toBe('1a4.com');
+    });
+
+    it('should be well-formed: unique ids, lowercase batch IDs, no duplicates, indexes below 2^31', () => {
+      const entries = [...qrVectors.labels, ...qrVectors.strictRejections];
+      const ids = [...entries, ...qrVectors.invalidInputs].map((entry) => entry.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(new Set(entries.map((e) => `${e.batchId}:${e.index}`)).size).toBe(entries.length);
+      expect(new Set(entries.flatMap((e) => [e.base36Code, e.base64Code])).size).toBe(entries.length * 2);
+      const batchIdByName = new Map(qrVectors.batches.map((batch) => [batch.id, batch.batchId]));
+      for (const entry of entries) {
+        expect(entry.batchId, entry.id).toBe(batchIdByName.get(entry.batch));
+        expect(entry.batchId, entry.id).toMatch(/^[0-9a-f]{24}$/);
+        expect(Number.isInteger(entry.index), entry.id).toBe(true);
+        expect(entry.index, entry.id).toBeGreaterThanOrEqual(0);
+        expect(entry.index, entry.id).toBeLessThan(2 ** 31);
+      }
+      for (const label of qrVectors.labels) {
+        expect(label.varintBytes, label.id).toBe(varintWidth(label.index));
+      }
+    });
+
+    it('should cover every requested varint boundary for each known-prefix batch, plus "-" and "_" codes', () => {
+      const required = [0, 1, 127, 128, 248, 249, 16383, 16384, 2097151, 2097152];
+      const prefixBatches = qrVectors.batches.filter((batch) => batch.category === 'known-prefix');
+      expect(prefixBatches.length).toBeGreaterThanOrEqual(2);
+      for (const batch of prefixBatches) {
+        const indexes = qrVectors.labels.filter((label) => label.batch === batch.id).map((label) => label.index);
+        expect(indexes, batch.id).toEqual(expect.arrayContaining(required));
+      }
+      expect(qrVectors.labels.some((label) => label.base64Code.includes('-'))).toBe(true);
+      expect(qrVectors.labels.some((label) => label.base64Code.includes('_'))).toBe(true);
+      for (const label of qrVectors.labels) {
+        expect(label.tags.includes('base64-hyphen'), label.id).toBe(label.base64Code.includes('-'));
+        expect(label.tags.includes('base64-underscore'), label.id).toBe(label.base64Code.includes('_'));
+      }
+    });
+
+    qrVectors.labels.forEach((label) => {
+      it(`${label.id}: should encode to the expected Base36 and Base64 URLs`, () => {
+        const batchId = new RetailId.ObjectId(label.batchId);
+        expect(RetailId.getShortUrl(batchId, label.index)).toBe(qrBase36Url(defaultDomain, label.base36Code));
+        expect(RetailId.getShortUrl(batchId, label.index, { base64: true })).toBe(qrBase64Url(defaultDomain, label.base64Code));
+      });
+
+      it(`${label.id}: should decode both encodings in default and strict mode`, () => {
+        const inputs = [
+          qrBase36Url(defaultDomain, label.base36Code),
+          qrBase64Url(defaultDomain, label.base64Code),
+          label.base36Code,
+          label.base64Code,
+        ];
+        for (const strict of [false, true]) {
+          for (const input of inputs) {
+            const context = `${label.id} ${input} strict=${strict}`;
+            const pair = new RetailId.RetailIdPair(input, strict);
+            expect(batchHex(pair), context).toBe(label.batchId);
+            expect(pair.index, context).toBe(label.index);
+          }
+        }
+      });
+    });
+
+    qrVectors.customDomain.forEach((vector) => {
+      it(`${vector.id}: should encode with a custom domain and decode back to the same label`, () => {
+        const label = qrVectors.labels.find((candidate) => candidate.id === vector.label);
+        expect(label, vector.label).toBeDefined();
+        const batchId = new RetailId.ObjectId(label!.batchId);
+        expect(RetailId.getShortUrl(batchId, label!.index, { domain: vector.domain })).toBe(vector.base36Url);
+        expect(RetailId.getShortUrl(batchId, label!.index, { domain: vector.domain, base64: true })).toBe(vector.base64Url);
+        for (const url of [vector.base36Url, vector.base64Url]) {
+          const pair = new RetailId.RetailIdPair(url);
+          expect(batchHex(pair), url).toBe(label!.batchId);
+          expect(pair.index, url).toBe(label!.index);
+        }
+      });
+    });
+
+    qrVectors.strictRejections.forEach((vector) => {
+      it(`${vector.id}: strict mode should reject an unknown prefix with an invalid timestamp`, () => {
+        const inputs = [
+          qrBase36Url(defaultDomain, vector.base36Code),
+          qrBase64Url(defaultDomain, vector.base64Code),
+          vector.base36Code,
+          vector.base64Code,
+        ];
+        for (const input of inputs) {
+          expect(() => new RetailId.RetailIdPair(input, true), `${vector.id} ${input}`).toThrow(/Unrecognized URL/);
+        }
+      });
+    });
+
+    qrVectors.invalidInputs.forEach((vector) => {
+      it(`${vector.id}: should reject '${vector.input}' in default and strict mode`, () => {
+        for (const strict of [false, true]) {
+          expect(() => new RetailId.RetailIdPair(vector.input, strict), `${vector.id} strict=${strict}`).toThrow(/Unrecognized URL/);
+        }
+      });
     });
   });
 
