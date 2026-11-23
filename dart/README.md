@@ -38,19 +38,18 @@ void main() {
   final batchId = ObjectId.fromString("ABCDEF012345670000027190");
 
   // Encode as Base36 (default, uppercase)
-  final options = EncodeOptions().setDomain("d.1a4.com");
-  final url = RetailId.encode(batchId: batchId, index: 485, options: options);
-  // Result: "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
+  final url = RetailId.encode(batchId: batchId, index: 485);
+  // Result: "HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 
   // Encode as Base64
-  final optionsBase64 = EncodeOptions().setBase64(true).setDomain("d.1a4.com");
+  final optionsBase64 = EncodeOptions().setBase64(true);
   final urlBase64 = RetailId.encode(batchId: batchId, index: 485, options: optionsBase64);
-  // Result: "https://d.1a4.com/q83vASNFZwAAAnGQ5QM"
+  // Result: "https://1a4.com/q83vASNFZwAAAnGQ5QM"
 
   // Custom domain
   final customDomain = EncodeOptions().setDomain("d.1a4.com");
   final urlCustom = RetailId.encode(batchId: batchId, index: 485, options: customDomain);
-  // Result: "HTTPS://d.1a4.com/10NOIEYKAJDG6CF0EXGJL"
+  // Result: "HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 }
 ```
 
@@ -63,7 +62,7 @@ import 'package:dart/src/retail_id_pair.dart';
 
 void main() {
   // Decode a RetailID URL
-  final pair = RetailId.decode("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+  final pair = RetailId.decode("HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR");
 
   final batchId = pair.batchId;
   final index = pair.index;
@@ -82,7 +81,7 @@ import 'package:dart/src/retail_id_pair.dart';
 
 void main() {
   // Construct from URL
-  final pair = RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+  final pair = RetailIdPair("HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR");
 
   // Access properties
   final batchId = pair.batchId;

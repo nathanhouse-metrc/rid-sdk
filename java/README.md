@@ -47,19 +47,18 @@ import com.retailid.*;
 ObjectId batchId = new ObjectId("ABCDEF012345670000027190");
 
 // Encode as Base36 (default, uppercase)
-EncodeOptions options = new EncodeOptions().setDomain("d.1a4.com");
-String url = RetailId.encode(batchId, 485, options);
-// Result: "HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL"
+String url = RetailId.encode(batchId, 485);
+// Result: "HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 
 // Encode as Base64
-EncodeOptions options = new EncodeOptions().setBase64(true).setDomain("d.1a4.com");
-String urlBase64 = RetailId.encode(batchId, 485, options);
-// Result: "https://d.1a4.com/q83vASNFZwAAAnGQ5QM"
+EncodeOptions base64Options = new EncodeOptions().setBase64(true);
+String urlBase64 = RetailId.encode(batchId, 485, base64Options);
+// Result: "https://1a4.com/q83vASNFZwAAAnGQ5QM"
 
 // Custom domain
 EncodeOptions customDomain = new EncodeOptions().setDomain("d.1a4.com");
 String urlCustom = RetailId.encode(batchId, 485, customDomain);
-// Result: "HTTPS://d.1a4.com/10NOIEYKAJDG6CF0EXGJL"
+// Result: "HTTPS://D.1A4.COM/78OEAYDSAXRN14AQY5YWAR"
 ```
 
 ### Decoding
@@ -68,7 +67,7 @@ String urlCustom = RetailId.encode(batchId, 485, customDomain);
 import com.retailid.*;
 
 // Decode a RetailID URL
-RetailIdPair pair = RetailId.decode("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+RetailIdPair pair = RetailId.decode("HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR");
 
 ObjectId batchId = pair.getBatchId();
 int index = pair.getIndex();
@@ -83,7 +82,7 @@ System.out.println("Index: " + index);                      // 485
 import com.retailid.*;
 
 // Construct from URL
-RetailIdPair pair = new RetailIdPair("HTTPS://D.1A4.COM/10NOIEYKAJDG6CF0EXGJL");
+RetailIdPair pair = new RetailIdPair("HTTPS://1A4.COM/78OEAYDSAXRN14AQY5YWAR");
 
 // Access properties
 ObjectId batchId = pair.getBatchId();
